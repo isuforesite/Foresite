@@ -1,0 +1,6 @@
+
+ogr2ogr -s_srs "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23.0 +lon_0=-96.0 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs" -t_srs EPSG:4326 -f "PostgreSQL" PG:"user=<> host=<> port=<> dbname=<> password=<>" gSSURGO_CONUS.gdb -progress -gt 65536 -lco SCHEMA=ssurgo_2019 -lco SPATIAL_INDEX=NO -lco OVERWRITE=YES
+
+ogr2ogr -s_srs "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23.0 +lon_0=-96.0 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs" -t_srs EPSG:4326 -f "PostgreSQL" PG:"user=<> host=<> port=<> dbname=<> password=<>" gSSURGO_CONUS.gdb MUPOLYGON -nlt POLYGON -progress -gt 65536 -lco SCHEMA=ssurgo_2019 -lco SPATIAL_INDEX=NO -lco OVERWRITE=YES
+
+ogr2ogr -s_srs "+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23.0 +lon_0=-96.0 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs" -t_srs EPSG:4326 -f "PostgreSQL" PG:"user=<> host=<> port=<> dbname=<> password=<>" gSSURGO_CONUS.gdb SAPOLYGON -nlt POLYGON -progress -gt 65536 -lco SCHEMA=ssurgo_2019 -lco SPATIAL_INDEX=NO -lco OVERWRITE=YES
