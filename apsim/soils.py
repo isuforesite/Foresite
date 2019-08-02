@@ -151,11 +151,14 @@ def Create_Soil_XML( hrzn_df ):
     ### air dry
     air_dry = SubElement( water, 'AirDry' )
     for lyr in APSIM_Soil_Layers:
-        if lyr[1] <= 15.0:
+        if lyr[0] <= 15.0 & lyr[0] > 0.0:
             value = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
-            value = value * 0.01 * 0.5
+            value = value * 0.5
+        elif lyr[0] <= 30.0 & lyr[0] > 15.0:
+            value = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
+            value = value * 0.75
         else:
-            value = 0.0
+            value = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
         subelem = SubElement( air_dry, 'double' )
         subelem.text = str( round( value, 3 ) )
 
