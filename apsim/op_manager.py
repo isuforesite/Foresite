@@ -14,10 +14,12 @@ def Init_New_Op( date ):
 ###
 def Add_Till_Op( date, type, f_incorp = None, tillage_depth = None ):
     op_elem = Init_New_Op( date )
-    action = 'SurfaceOrganicMatter tillage type = ' + type
     if type == 'user_defined':
-        action += ( ', f_incorp = {} (0-1), tillage_depth = {} (mm)'.format(
-            str( f_incorp ), str( tillage_depth ) ) )
+        action = ( 'SurfaceOrganicMatter tillage type = user_defined, ' +
+            'f_incorp = {} (0-1), tillage_depth = {} (mm)' ).format(
+            str( f_incorp ), str( tillage_depth ) )
+    else:
+        action = 'SurfaceOrganicMatter tillage type = ' + type
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
     return op_elem
@@ -25,8 +27,9 @@ def Add_Till_Op( date, type, f_incorp = None, tillage_depth = None ):
 ###
 def Add_Fertilizer_Op( date, value, depth, type ):
     op_elem = Init_New_Op( date )
-    action = ( 'fertiliser apply ammount = {} (kg/ha), depth = {} (mm), ' +
-        'type = {}' ).format( str( value ), str( depth ), type )
+    action = ( 'fertiliser apply ' +
+        'ammount = {} (kg/ha), depth = {} (mm), type = {}').format(
+        str( value ), str( depth ), type )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
     return op_elem
@@ -34,9 +37,10 @@ def Add_Fertilizer_Op( date, value, depth, type ):
 ###
 def Add_Manure_Op( date, type, name, mass, cnr, cpr ):
     op_elem = Init_New_Op( date )
-    action = ( 'SurfaceOrganicMatter add_surfaceom type = {}, name = {}, ' +
-        'mass = {} (kg/ha), cnr = {}, cpr = {}' ).format( type, name,
-        str( mass ), str( cnr ), str( cpr ) )
+    action = (
+        'SurfaceOrganicMatter add_surfaceom ' +
+        'type = {}, name = {}, mass = {} (kg/ha), cnr = {}, cpr = {}' ).format(
+        type, name, str( mass ), str( cnr ), str( cpr ) )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
     return op_elem
@@ -61,7 +65,7 @@ def Add_Harvest_Op( date, crop ):
     return op_elem
 
 
-cal_obj = [vzz
+cal_obj = [
     {
         'date': '1/4/2007',
         'op_class': 'Tillage',
@@ -113,4 +117,4 @@ Add_Till_Op( '13/4/2007', 'user_defined', 0.0, 50.0 )
 Add_Fertilizer_Op( '14/4/2007', 25.0, 10.0, 'urea_no3' )
 Add_Planting_Op( '15/4/2007', 'maize', 8, 50.0, 'B_115', 762.0 )
 Add_Harvest_Op( '20/10/2010', 'maize' )
-Add_Manure_Op( 'manure', 'manure_app', 10000.0, 20.0, 50.0 )
+Add_Manure_Op( '20/10/2010', 'manure', 'manure_app', 10000.0, 20.0, 50.0 )
