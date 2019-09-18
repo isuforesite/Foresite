@@ -1,14 +1,13 @@
 do $$
 declare
-	stabbr text := null;
+  spec_state text := null;
+  spec_states text[] := array[ 'IA' ];
 begin
 -----
---create index ssurgo_mu18_gidx on ssurgo_2018.mupolygon using gist (shape);
---vacuum analyze ssurgo_2018.mupolygon;
 
 -----
-drop table if exists clu.clu_mupoly18;
-create table clu.clu_mupoly18(
+drop table if exists clu.clu_mupoly19;
+create table clu.clu_mupoly19(
   state char( 2 ),
   fips char( 5 ),
   clukey int4,
@@ -16,22 +15,17 @@ create table clu.clu_mupoly18(
   mukey text,
   acres numeric( 10, 5 ),
   clu_pct numeric( 8, 5 ),
-	wkb_geometry geometry );
+  wkb_geometry geometry );
 
 -----
-raise notice 'Processing CLU-mupolygon intersection';
---for stabbr in
--- 	select
--- 		distinct( fips ) as fips
--- 	from clu.clu_conus
--- 	where
--- 		state = 'IA'
--- 	order by
--- 		fips asc
---loop
---
-raise notice '%', stabbr;
-insert into clu.clu_mupoly18
+for spec_state in
+  select
+    *
+  from unnest( spec_states )
+loop
+
+raise notice 'Processing CLU-mupolygon intersection: %', spec_state;
+insert into clu.clu_mupoly19
 select
   t1.state,
   t1.fips,
@@ -43,15 +37,15 @@ select
     sum( st_area( geom_int.geom::geography ) ) over w as clu_pct,
 	geom_int.geom
 from clu.clu_conus t1,
-  ssurgo_2018.mupolygon t2,
+  ssurgo_2019.mupolygon t2,
   st_dump( st_intersection( t1.wkb_geometry, t2.shape ) ) geom_int
 where
-	t1.state = 'IA'
-	and st_intersects( t1.wkb_geometry, t2.shape )
+  t1.state = spec_state
+  and st_intersects( t1.wkb_geometry, t2.shape )
   and not st_touches( t1.wkb_geometry, t2.shape )
 window w as ( partition by t1.clukey );
---
---end loop;
+
+end loop;
 
 ---
 end
