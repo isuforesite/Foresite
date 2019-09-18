@@ -51,7 +51,6 @@ def Add_Planting_Op( date, crop, density, depth, cultivar, spacing ):
     action = ( '{} sow plants = {} (plants/m2), sowing_depth = {} (mm), ' +
         'cultivar = {}, row_spacing = {} (mm), crop_class = plant' ).format(
         crop, str( density ), str( depth ), cultivar, str( spacing ) )
-    print( action )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
     return op_elem
@@ -112,9 +111,9 @@ def Add_Management_Oprns( calender ):
 
 
 
-
-Add_Till_Op( '13/4/2007', 'user_defined', 0.0, 50.0 )
-Add_Fertilizer_Op( '14/4/2007', 25.0, 10.0, 'urea_no3' )
-Add_Planting_Op( '15/4/2007', 'maize', 8, 50.0, 'B_115', 762.0 )
-Add_Harvest_Op( '20/10/2010', 'maize' )
-Add_Manure_Op( '20/10/2010', 'manure', 'manure_app', 10000.0, 20.0, 50.0 )
+#
+# Add_Till_Op( '13/4/2007', 'user_defined', 0.0, 50.0 )
+# Add_Fertilizer_Op( '14/4/2007', 25.0, 10.0, 'urea_no3' )
+# Add_Planting_Op( '15/4/2007', 'maize', 8, 50.0, 'B_115', 762.0 )
+# Add_Harvest_Op( '20/10/2010', 'maize' )
+# Add_Manure_Op( '20/10/2010', 'manure', 'manure_app', 10000.0, 20.0, 50.0 )
