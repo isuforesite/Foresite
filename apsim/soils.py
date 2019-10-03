@@ -43,12 +43,17 @@ def Create_Layer_XML( parent, name, eqn ):
     return
 
 ###
-def Get_Depth_Weighted( lyr, var, horizon_df ):
+def Get_Depth_Weighted( lyr, var, horizon_df, ssurgo = True ):
     apsim_top = lyr[0]
     apsim_bttm = lyr[1]
     for idx, hrzn in horizon_df.iterrows():
-        hzdept = hrzn['hzdept']
-        hzdepb = hrzn['hzdepb']
+        if ssurgo:
+            hzdept = hrzn['hzdept']
+            hzdepb = hrzn['hzdepb']
+        else:
+            hzdept = float( hrzn['layer'] ) - 20
+            hzdepb = float( hrzn['layer'] )
+
         if ( ( apsim_top <= hzdept ) & ( apsim_bttm > hzdept ) ):
             wgt = ( apsim_bttm - hzdept )/( apsim_bttm - apsim_top )
         elif ( ( apsim_top < hzdepb ) & ( apsim_bttm >= hzdepb ) ):
@@ -60,14 +65,20 @@ def Get_Depth_Weighted( lyr, var, horizon_df ):
         else:
             wgt = 0.0
 
-        horizon_df.loc[ idx, 'wgt_var' ] = wgt * hrzn[ var ]
+        value = float( hrzn[ var ] )
 
-    value = horizon_df[ 'wgt_var' ].sum()
+        horizon_df.loc[ idx, 'wgt' ] = wgt
+        horizon_df.loc[ idx, 'wgt_var' ] = wgt * value
+
+    if horizon_df[ 'wgt' ].sum() != 1.0:
+        value = float( hrzn[ var ] )
+    else:
+        value = horizon_df[ 'wgt_var' ].sum()
 
     return value
 
 ###
-def Add_Soil_Crop( crop, hrzn_df ):
+def Add_Soil_Crop( crop, hrzn_df, ssurgo = True ):
     soil_crp = Element( 'SoilCrop' )
     soil_crp.set( 'name', crop )
     sc_thickness = SubElement( soil_crp, 'Thickness' )
@@ -77,21 +88,21 @@ def Add_Soil_Crop( crop, hrzn_df ):
 
     sc_ll = SubElement( soil_crp, 'LL' )
     for lyr in APSIM_Soil_Layers:
-        val = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
+        val = Get_Depth_Weighted( lyr, 'wfifteenbar_r', hrzn_df, ssurgo )
         subelem = SubElement( sc_ll, 'double' )
-        subelem.text = str( 0.01 * val )
+        subelem.text = str( round( 0.01 * val, 3 ) )
 
     sc_kl = SubElement( soil_crp, 'KL' )
     for lyr in APSIM_Soil_Layers:
         val = 0.08 * math.exp( -0.00654 * lyr[0] )
         subelem = SubElement( sc_kl, 'double' )
-        subelem.text = str( val )
+        subelem.text = str( round( val, 3 ) )
 
     sc_xf = SubElement( soil_crp, 'XF' )
     for lyr in APSIM_Soil_Layers:
         val = 1.0
         subelem = SubElement( sc_xf, 'double' )
-        subelem.text = str( val )
+        subelem.text = str( round( val, 3 ) )
 
     return soil_crp
 
@@ -151,12 +162,12 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     for lyr in APSIM_Soil_Layers:
         if lyr[0] <= 15.0 & lyr[0] > 0.0:
             value = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
-            value = value * 0.5
+            value = 0.01 * value * 0.5
         elif lyr[0] <= 30.0 & lyr[0] > 15.0:
             value = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
-            value = value * 0.75
+            value = 0.01 * value * 0.75
         else:
-            value = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
+            value = 0.01 * Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df )
         subelem = SubElement( air_dry, 'double' )
         subelem.text = str( round( value, 3 ) )
 
@@ -228,13 +239,13 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     sum_u = SubElement( soil_wat, 'SummerU' )
     sum_u.text = str( u )
     sum_date = SubElement( soil_wat, 'SummerDate' )
-    sum_date.text = '1-jun'
+    sum_date.text = '1-Jun'
     win_cona = SubElement( soil_wat, 'SummerCona' )
     win_cona.text = str( cona )
     win_u = SubElement( soil_wat, 'SummerU' )
     win_u.text = str( u )
     win_date = SubElement( soil_wat, 'WinterDate' )
-    win_date.text = '1-dec'
+    win_date.text = '1-Dec'
     diff_const = SubElement( soil_wat, 'DiffusConst' )
     diff_const.text = str( 40 )
     diff_slope = SubElement( soil_wat, 'DiffusSlope' )
@@ -246,7 +257,7 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     cnred = SubElement( soil_wat, 'CNRed' )
     cnred.text = str( 20 )
     cncov = SubElement( soil_wat, 'CNCov' )
-    cncov.text = str( 20 )
+    cncov.text = str( 0.8 )
     slope = SubElement( soil_wat, 'Slope' )
     slope.text = 'NaN'
     diswidth = SubElement( soil_wat, 'DischargeWidth' )
@@ -285,6 +296,7 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     oc = SubElement( som, 'OC' )
     for lyr in APSIM_Soil_Layers:
         value = Get_Depth_Weighted( lyr, 'om', hrzn_df )
+        print( value )
         value = value/1.724
         subelem = SubElement( oc, 'double' )
         subelem.text = str( round( value, 3 ) )
@@ -300,7 +312,6 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
         value = [ db[0] for db in depth_bckts
             if ( ( db[0][0] <= lyr[1] ) & ( db[0][1] > lyr[1] ) ) ][0]
         subelem = SubElement( fbiom, 'double' )
-        print( value )
         subelem.text = str( round( value, 3 ) )
 
     finert = SubElement( som, 'FInert' )
@@ -394,28 +405,20 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     return soil_xml
 
 ###
-def Create_Soil_XML( soil_df ):
+def Create_Soil_XML( uuid, soil_df ):
     # base specs
     soil_sample_id = soil_df.iloc[0][ 'soil_sample_id' ]
 
     soil_xml = Element( 'Soil' )
-    soil_xml.set( 'name', 'soil_' + str( soil_sample_id ) )
-    rec_id = SubElement( soil_xml, 'RecordNumber' )
-    rec_id.text = str( soil_sample_id )
-    lname = SubElement( soil_xml, 'LocalName' )
-    lname = 'soil_' + str( soil_sample_id )
-    site = SubElement( soil_xml, 'Site' )
-    region = SubElement( soil_xml, 'Region' )
-    state = SubElement( soil_xml, 'State' )
-    cntry = SubElement( soil_xml, 'Country' )
-    lat = SubElement( soil_xml, 'Latitude' )
-    lon = SubElement( soil_xml, 'Longitude' )
-    sample_yr = SubElement( soil_xml, 'YearOfSampling' )
-    datasrc = SubElement( soil_xml, 'DataSource' )
-    datasrc.text = 'Foresite training soil'
-    comment = SubElement( soil_xml, 'Comment' )
-    comment.text = 'Generated using Iowa State University Foresite Framework'
+    initwater = SubElement( soil_xml, 'InitialWater' )
+    initwater.set( 'name', 'Initial Water' )
+    fracfull = SubElement( initwater, 'FractionFull' )
+    fracfull.text = str( 0.0 )
+    percmethod = SubElement( initwater, 'PercentMethod' )
+    percmethod.text = 'FilledFromTop'
     water = SubElement( soil_xml, 'Water' )
+    water.append( Add_Soil_Crop( 'maize', soil_df, False ) )
+    water.append( Add_Soil_Crop( 'soybean', soil_df, False ) )
 
     ### layer thickness
     thickness = SubElement( water, 'Thickness' )
@@ -426,33 +429,35 @@ def Create_Soil_XML( soil_df ):
     ### bulk density
     bulk_dens = SubElement( water, 'BD' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'dbthirdbar_r', soil_df )
+        value = Get_Depth_Weighted( lyr, 'dbthirdbar_r', soil_df, False )
         subelem = SubElement( bulk_dens, 'double' )
         subelem.text = str( round( value, 3 ) )
 
     ### air dry
     air_dry = SubElement( water, 'AirDry' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df )
-        if lyr[0] <= 15.0 & lyr[0] > 0.0:
-            value = value * 0.5
-        elif lyr[0] <= 30.0 & lyr[0] > 15.0:
-            value = value * 0.75
+        value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df, False )
+        if ( lyr[0] <= 15.0 ) & ( lyr[0] > 0.0 ):
+            value = value * 0.5 * 0.01
+        elif ( lyr[0] <= 30.0 ) & ( lyr[0] > 15.0 ):
+            value = value * 0.75 * 0.01
+        else:
+            value = value * 0.01
         subelem = SubElement( air_dry, 'double' )
         subelem.text = str( round( value, 3 ) )
 
     ### lower limit (wilting pt.)
     ll15 = SubElement( water, 'LL15' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df )
+        value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df, False )
         value = value * 0.01
-        subelem = SubElement( air_dry, 'double' )
+        subelem = SubElement( ll15, 'double' )
         subelem.text = str( round( value, 3 ) )
 
     ### drained upper limit (field cap.)
     dul = SubElement( water, 'DUL' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df)
+        value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df, False)
         value = value * 0.01
         subelem = SubElement( dul, 'double' )
         subelem.text = str( round( value, 3 ) )
@@ -460,28 +465,24 @@ def Create_Soil_XML( soil_df ):
     ### saturated water holding capacity
     sat = SubElement( water, 'SAT' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'dbthirdbar_r', soil_df )
+        value = Get_Depth_Weighted( lyr, 'dbthirdbar_r', soil_df, False )
         value = 1 - ( value/2.65 )
         subelem = SubElement( sat, 'double' )
         subelem.text = str( round( value, 3 ) )
 
     ### saturated hydraulic conductivity
-    ks = SubElement( water, 'KS' )
-    for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'ksat_r', soil_df )
-        value = 0.001 * 3600 * 24 * value
-        subelem = SubElement( ks, 'double' )
-        subelem.text = str( round( value, 3 ) )
-
-    ### initialize crop-soil params
-    water.append( Add_Soil_Crop( 'maize', soil_df ) )
-    water.append( Add_Soil_Crop( 'soybean', soil_df ) )
+    # ks = SubElement( water, 'KS' )
+    # for lyr in APSIM_Soil_Layers:
+    #     value = Get_Depth_Weighted( lyr, 'ksat_r', soil_df, False )
+    #     value = 0.001 * 3600 * 24 * value
+    #     subelem = SubElement( ks, 'double' )
+    #     subelem.text = str( round( value, 3 ) )
 
     ### get ave clay in profile
     tot_clay = 0.0
     for lyr in APSIM_Soil_Layers:
         depth = lyr[1] - lyr[0]
-        tot_clay += depth * Get_Depth_Weighted( lyr, 'claytotal_r', soil_df )
+        tot_clay += depth * Get_Depth_Weighted( lyr, 'claytotal_r', soil_df, False )
     tot_clay = tot_clay/APSIM_Soil_Layers[-1][1]
 
     clay_bckts = [
@@ -509,13 +510,13 @@ def Create_Soil_XML( soil_df ):
     sum_u = SubElement( soil_wat, 'SummerU' )
     sum_u.text = str( u )
     sum_date = SubElement( soil_wat, 'SummerDate' )
-    sum_date.text = '1-jun'
-    win_cona = SubElement( soil_wat, 'SummerCona' )
+    sum_date.text = '1-Jun'
+    win_cona = SubElement( soil_wat, 'WinterCona' )
     win_cona.text = str( cona )
-    win_u = SubElement( soil_wat, 'SummerU' )
+    win_u = SubElement( soil_wat, 'WinterU' )
     win_u.text = str( u )
     win_date = SubElement( soil_wat, 'WinterDate' )
-    win_date.text = '1-dec'
+    win_date.text = '1-Dec'
     diff_const = SubElement( soil_wat, 'DiffusConst' )
     diff_const.text = str( 40 )
     diff_slope = SubElement( soil_wat, 'DiffusSlope' )
@@ -527,15 +528,7 @@ def Create_Soil_XML( soil_df ):
     cnred = SubElement( soil_wat, 'CNRed' )
     cnred.text = str( 20 )
     cncov = SubElement( soil_wat, 'CNCov' )
-    cncov.text = str( 20 )
-    slope = SubElement( soil_wat, 'Slope' )
-    slope.text = 'NaN'
-    diswidth = SubElement( soil_wat, 'DischargeWidth' )
-    diswidth.text = 'NaN'
-    catch_area = SubElement( soil_wat, 'CatchmentArea' )
-    catch_area.text = 'NaN'
-    max_pond = SubElement( soil_wat, 'MaxPond' )
-    max_pond.text = 'NaN'
+    cncov.text = str( 0.8 )
 
     ### layer thickness
     thickness = SubElement( soil_wat, 'Thickness' )
@@ -547,7 +540,7 @@ def Create_Soil_XML( soil_df ):
     swcon = SubElement( soil_wat, 'SWCON' )
     for lyr in APSIM_Soil_Layers:
         subelem = SubElement( swcon, 'double' )
-        subelem.text = str( 10 * ( lyr[1] - lyr[0] ) )
+        subelem.text = str( 0.5 )
 
     ###
     som = SubElement( soil_xml, 'SoilOrganicMatter' )
@@ -562,11 +555,18 @@ def Create_Soil_XML( soil_df ):
     enrbcoeff = SubElement( som, 'EnrBCoeff' )
     enrbcoeff.text = str( 7.4 )
 
+    thickness = SubElement( som, 'Thickness' )
+    for lyr in APSIM_Soil_Layers:
+        subelem = SubElement( thickness, 'double' )
+        subelem.text = str( 10 * ( lyr[1] - lyr[0] ) )
+
     ### soil organic carbon
     oc = SubElement( som, 'OC' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'om_r', soil_df )
+        value = Get_Depth_Weighted( lyr, 'om_r', soil_df, False )
         value = value/1.724
+        if value == 0.0:
+            value = 0.1
         subelem = SubElement( oc, 'double' )
         subelem.text = str( round( value, 3 ) )
 
@@ -578,10 +578,9 @@ def Create_Soil_XML( soil_df ):
         [ ( 30, 60 ), 0.13 ],
         [ ( 60, 1000 ), 0.1 ] ]
     for lyr in APSIM_Soil_Layers:
-        value = [ db[0] for db in depth_bckts
+        value = [ db[1] for db in depth_bckts
             if ( ( db[0][0] <= lyr[1] ) & ( db[0][1] > lyr[1] ) ) ][0]
         subelem = SubElement( fbiom, 'double' )
-        print( value )
         subelem.text = str( round( value, 3 ) )
 
     finert = SubElement( som, 'FInert' )
@@ -593,14 +592,10 @@ def Create_Soil_XML( soil_df ):
         [ ( 90, 120 ), 0.80 ],
         [ ( 120, 1000 ), 0.9 ] ]
     for lyr in APSIM_Soil_Layers:
-        value = [ db[0] for db in depth_bckts
+        value = [ db[1] for db in depth_bckts
             if ( ( db[0][0] <= lyr[1] ) & ( db[0][1] > lyr[1] ) ) ][0]
         subelem = SubElement( finert, 'double' )
         subelem.text = str( round( value, 3 ) )
-
-    ###
-    oc_units = SubElement( som, 'OCUnits' )
-    oc_units.text = 'Total'
 
     anlys = SubElement( soil_xml, 'Analysis' )
     thickness = SubElement( anlys, 'Thickness' )
@@ -608,34 +603,18 @@ def Create_Soil_XML( soil_df ):
         subelem = SubElement( thickness, 'double' )
         subelem.text = str( 10 * ( lyr[1] - lyr[0] ) )
 
-    txtr = SubElement( anlys, 'Texture' )
-    for lyr in APSIM_Soil_Layers:
-        subelem = SubElement( txtr, 'string' )
-
-    mcolor = SubElement( anlys, 'MunsellColour' )
-    for lyr in APSIM_Soil_Layers:
-        subelem = SubElement( mcolor, 'string' )
-
     ph = SubElement( anlys, 'PH' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'ph1to1h2o_r', soil_df )
+        value = Get_Depth_Weighted( lyr, 'ph1to1h2o_r', soil_df, False )
         subelem = SubElement( ph, 'double' )
         subelem.text = str( round( value, 3 ) )
 
-    phunits = SubElement( anlys, 'PHUnits' )
-    phunits.text = 'Water'
-    boronunits = SubElement( anlys, 'BoronUnits' )
-    boronunits.text = 'HotWater'
-    init_h2o = SubElement( soil_xml, 'InitialWater' )
-    fracfull = SubElement( init_h2o, 'FractionFull' )
-    fracfull.text = str( 1 )
-    depthwet = SubElement( init_h2o, 'DepthWetSoil' )
-    depthwet.text = str( 'NaN' )
-    percmethod = SubElement( init_h2o, 'PercentMethod' )
-    percmethod.text = 'FilledFromTop'
-
     sample = SubElement( soil_xml, 'Sample' )
     sample.set( 'name', 'Initial nitrogen' )
+
+    sampdate = SubElement( sample, 'Date' )
+    sampdate.set( 'type', 'date' )
+    sampdate.set( 'description', 'Sample Date:' )
 
     thickness = SubElement( sample, 'Thickness' )
     for lyr in APSIM_Soil_Layers:
@@ -647,7 +626,7 @@ def Create_Soil_XML( soil_df ):
     lyr_cnt = 0
     for lyr in APSIM_Soil_Layers:
         subelem = SubElement( no3, 'double' )
-        subelem.text = str( 10 - lyr_cnt )
+        subelem.text = str( 0.0 )
         lyr_cnt += 1
 
     ### init nh4
@@ -655,21 +634,7 @@ def Create_Soil_XML( soil_df ):
     lyr_cnt = 0
     for lyr in APSIM_Soil_Layers:
         subelem = SubElement( nh4, 'double' )
-        subelem.text = str( 10 - lyr_cnt )
+        subelem.text = str( 0.0 )
         lyr_cnt += 1
-
-    no3_units = SubElement( sample, 'NO3Units' )
-    no3_units.text = 'kgha'
-    nh4_units = SubElement( sample, 'NH4Units' )
-    nh4_units.text = 'kgha'
-    sw_units = SubElement( sample, 'SWUnits' )
-    sw_units.text = 'Volumetric'
-    oc_units = SubElement( sample, 'OCUnits' )
-    oc_units.text = 'Total'
-    ph_units = SubElement( sample, 'PHUnits' )
-    ph_units.text = 'Water'
-
-    xmltree = ElementTree( soil_xml )
-    xmltree.write( mukey + '.apsim' )
 
     return soil_xml
