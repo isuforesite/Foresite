@@ -122,7 +122,7 @@ for idx,task in input_tasks.iterrows():
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 
-    spec_yr = 2018
+    spec_yr = 2019
     get_date = lambda d : ( [ d.split( '-' )[0], month_ids[ d.split( '-' )[1] ],
         spec_yr ] )
 
