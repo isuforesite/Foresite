@@ -406,10 +406,13 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
 
 ###
 def Create_Soil_XML( uuid, soil_df ):
-    # base specs
+    # get soil layers data based on sample ID
     soil_sample_id = soil_df.iloc[0][ 'soil_sample_id' ]
 
+    # construct soil xml
     soil_xml = Element( 'Soil' )
+
+    # initial water
     initwater = SubElement( soil_xml, 'InitialWater' )
     initwater.set( 'name', 'Initial Water' )
     fracfull = SubElement( initwater, 'FractionFull' )
@@ -437,6 +440,8 @@ def Create_Soil_XML( uuid, soil_df ):
     air_dry = SubElement( water, 'AirDry' )
     for lyr in APSIM_Soil_Layers:
         value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df, False )
+
+        # weight value by depth
         if ( lyr[0] <= 15.0 ) & ( lyr[0] > 0.0 ):
             value = value * 0.5 * 0.01
         elif ( lyr[0] <= 30.0 ) & ( lyr[0] > 15.0 ):
@@ -485,6 +490,7 @@ def Create_Soil_XML( uuid, soil_df ):
         tot_clay += depth * Get_Depth_Weighted( lyr, 'claytotal_r', soil_df, False )
     tot_clay = tot_clay/APSIM_Soil_Layers[-1][1]
 
+    # clay bucket mapping for u and cona variables (bucket, u, cona)
     clay_bckts = [
         [ ( 0, 10 ), 6.75, 3.5 ],
         [ ( 10, 20 ), 8.5, 3.75 ],
@@ -498,9 +504,12 @@ def Create_Soil_XML( uuid, soil_df ):
     for cb in clay_bckts:
         if ( ( cb[0][0] <= tot_clay ) & ( cb[0][1] > tot_clay ) ):
             u = cb[1]
+
+    # cumulative evaporation before soil h2o decreases below atmospheric demand
     u = [ cb[1] for cb in clay_bckts
     if ( ( cb[0][0] <= tot_clay ) & ( cb[0][1] > tot_clay ) ) ][0]
 
+    # second stage evaporation against the square root of time
     cona = [ cb[2] for cb in clay_bckts
     if ( ( cb[0][0] <= tot_clay ) & ( cb[0][1] > tot_clay ) ) ][0]
 
@@ -536,7 +545,7 @@ def Create_Soil_XML( uuid, soil_df ):
         subelem = SubElement( thickness, 'double' )
         subelem.text = str( 10 * ( lyr[1] - lyr[0] ) )
 
-    ###
+    ### drainage coefficient
     swcon = SubElement( soil_wat, 'SWCON' )
     for lyr in APSIM_Soil_Layers:
         subelem = SubElement( swcon, 'double' )
@@ -618,7 +627,7 @@ def Create_Soil_XML( uuid, soil_df ):
     klat = SubElement(subdrain, 'Klat').text = str(2800)
     impermdepth = SubElement(subdrain, 'ImpermDepth').text = str(3900)
 
-    ###
+    ### surface OM module variables
     som = SubElement( soil_xml, 'SoilOrganicMatter' )
     rootcn = SubElement( som, 'RootCN' )
     rootcn.text = str( 40 )
@@ -646,7 +655,7 @@ def Create_Soil_XML( uuid, soil_df ):
         subelem = SubElement( oc, 'double' )
         subelem.text = str( round( value, 3 ) )
 
-    ###
+    ### fbiom = biom /(hum - inert_c)
     fbiom = SubElement( som, 'FBiom' )
     depth_bckts = [
         [ ( 0, 15 ), 0.35 ],
@@ -679,12 +688,14 @@ def Create_Soil_XML( uuid, soil_df ):
         subelem = SubElement( thickness, 'double' )
         subelem.text = str( 10 * ( lyr[1] - lyr[0] ) )
 
+    # soil pH
     ph = SubElement( anlys, 'PH' )
     for lyr in APSIM_Soil_Layers:
         value = Get_Depth_Weighted( lyr, 'ph1to1h2o_r', soil_df, False )
         subelem = SubElement( ph, 'double' )
         subelem.text = str( round( value, 3 ) )
 
+    # soil sample inputs
     sample = SubElement( soil_xml, 'Sample' )
     sample.set( 'name', 'Initial nitrogen' )
 
@@ -697,20 +708,24 @@ def Create_Soil_XML( uuid, soil_df ):
         subelem = SubElement( thickness, 'double' )
         subelem.text = str( 10 * ( lyr[1] - lyr[0] ) )
 
-    ### init no3
+    ### initial no3 ( set to OM percent )
     no3 = SubElement( sample, 'NO3' )
     lyr_cnt = 0
     for lyr in APSIM_Soil_Layers:
+        value = Get_Depth_Weighted( lyr, 'om_r', soil_df, False )
         subelem = SubElement( no3, 'double' )
-        subelem.text = str( 0.0 )
+        subelem.text = str( value )
         lyr_cnt += 1
 
-    ### init nh4
+    ### initial nh4 ( set to OM percent )
     nh4 = SubElement( sample, 'NH4' )
     lyr_cnt = 0
     for lyr in APSIM_Soil_Layers:
+        value = Get_Depth_Weighted( lyr, 'om_r', soil_df, False )
         subelem = SubElement( nh4, 'double' )
-        subelem.text = str( 0.0 )
+        subelem.text = str( value )
         lyr_cnt += 1
+
+
 
     return soil_xml
