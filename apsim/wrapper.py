@@ -7,7 +7,6 @@ from soils import *
 from database import *
 from op_manager import *
 from daymet import *
-from soils import *
 
 ###
 def Set_Output_Variables( out_file, var_list, freq ):

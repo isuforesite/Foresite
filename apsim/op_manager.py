@@ -64,7 +64,7 @@ def Add_Harvest_Op( date, crop ):
     return op_elem
 
 
-cal_obj = [
+""" cal_obj = [
     {
         'date': '1/4/2007',
         'op_class': 'Tillage',
@@ -93,7 +93,7 @@ cal_obj = [
         'depth': 10,
         'amount': 25
     },
-]
+] """
 
 
 ###

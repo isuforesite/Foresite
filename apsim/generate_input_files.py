@@ -6,11 +6,7 @@ from xml.etree.ElementTree import ElementTree, Element, SubElement
 
 from wrapper import *
 
-user = 'aepe'
-database = 'aepe'
-port = 2345
-host = '129.186.185.33'
-dbconn = ConnectToDB( port, host, user, database )
+dbconn = ConnectToDB()
 
 #####
 inpt_query = 'select * from test20.sample_inputs limit 5'
@@ -97,7 +93,8 @@ for idx,task in input_tasks.iterrows():
         'biomass',
         'fertiliser',
         'surfaceom_c',
-        'n2o_atm()',
+        'subsurface_drain',
+        'subsurface_drain_no3',
         'leach_no3' ]
     output_xml = Set_Output_Variables( uuid + '.out', outvars, 'daily' )
     area.append( output_xml )
@@ -122,7 +119,7 @@ for idx,task in input_tasks.iterrows():
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 
-    spec_yr = 2018
+    spec_yr = 2019
     get_date = lambda d : ( [ d.split( '-' )[0], month_ids[ d.split( '-' )[1] ],
         spec_yr ] )
 

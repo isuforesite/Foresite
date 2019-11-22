@@ -121,7 +121,7 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     rec_id = SubElement( soil_xml, 'RecordNumber' )
     rec_id.text = mukey
     lname = SubElement( soil_xml, 'LocalName' )
-    lname = '_'.join( [ str( musym ), str( mukey ), str( cokey ) ] )
+    lname.text = '_'.join( [ str( musym ), str( mukey ), str( cokey ) ] )
     site = SubElement( soil_xml, 'Site' )
     site.text = area_sym
     region = SubElement( soil_xml, 'Region' )
@@ -139,7 +139,7 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     datasrc = SubElement( soil_xml, 'DataSource' )
     datasrc.text = 'SSURGO 2019'
     comment = SubElement( soil_xml, 'Comment' )
-    comment.text = 'Iowa State University AEPE Framework'
+    comment.text = 'Iowa State University Foresite Framework'
     water = SubElement( soil_xml, 'Water' )
 
     hrzn_df.loc[ hrzn_df.index[-1], 'hzdepb'] = APSIM_Soil_Layers[-1][1]
@@ -182,7 +182,7 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     ### drained upper limit (field cap.)
     dul = SubElement( water, 'DUL' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'wfifteenbar', hrzn_df)
+        value = Get_Depth_Weighted( lyr, 'wthirdbar', hrzn_df )
         value = value * 0.01
         subelem = SubElement( dul, 'double' )
         subelem.text = str( round( value, 3 ) )
@@ -233,7 +233,7 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     cona = [ cb[2] for cb in clay_bckts
     if ( ( cb[0][0] <= tot_clay ) & ( cb[0][1] > tot_clay ) ) ][0]
 
-    soil_wat = SubElement( soil_xml, 'SoilWater' )
+    """ soil_wat = SubElement( soil_xml, 'SoilWater' )
     sum_cona = SubElement( soil_wat, 'SummerCona' )
     sum_cona.text = str( cona )
     sum_u = SubElement( soil_wat, 'SummerU' )
@@ -277,7 +277,7 @@ def Create_SSURGO_Soil_XML( hrzn_df ):
     swcon = SubElement( soil_wat, 'SWCON' )
     for lyr in APSIM_Soil_Layers:
         subelem = SubElement( swcon, 'double' )
-        subelem.text = str( 10 * ( lyr[1] - lyr[0] ) )
+        subelem.text = str( 10 * ( lyr[1] - lyr[0] ) ) """
 
     ###
     som = SubElement( soil_xml, 'SoilOrganicMatter' )
@@ -413,7 +413,7 @@ def Create_Soil_XML( uuid, soil_df ):
     initwater = SubElement( soil_xml, 'InitialWater' )
     initwater.set( 'name', 'Initial Water' )
     fracfull = SubElement( initwater, 'FractionFull' )
-    fracfull.text = str( 0.0 )
+    fracfull.text = str( 1 )
     percmethod = SubElement( initwater, 'PercentMethod' )
     percmethod.text = 'FilledFromTop'
     water = SubElement( soil_xml, 'Water' )
@@ -457,7 +457,7 @@ def Create_Soil_XML( uuid, soil_df ):
     ### drained upper limit (field cap.)
     dul = SubElement( water, 'DUL' )
     for lyr in APSIM_Soil_Layers:
-        value = Get_Depth_Weighted( lyr, 'wfifteenbar_r', soil_df, False)
+        value = Get_Depth_Weighted( lyr, 'wthirdbar_r', soil_df, False)
         value = value * 0.01
         subelem = SubElement( dul, 'double' )
         subelem.text = str( round( value, 3 ) )
@@ -471,12 +471,12 @@ def Create_Soil_XML( uuid, soil_df ):
         subelem.text = str( round( value, 3 ) )
 
     ### saturated hydraulic conductivity
-    # ks = SubElement( water, 'KS' )
-    # for lyr in APSIM_Soil_Layers:
-    #     value = Get_Depth_Weighted( lyr, 'ksat_r', soil_df, False )
-    #     value = 0.001 * 3600 * 24 * value
-    #     subelem = SubElement( ks, 'double' )
-    #     subelem.text = str( round( value, 3 ) )
+    ks = SubElement( water, 'KS' )
+    for lyr in APSIM_Soil_Layers:
+        value = Get_Depth_Weighted( lyr, 'ksat_r', soil_df, False )
+        value = 0.001 * 3600 * 24 * value
+        subelem = SubElement( ks, 'double' )
+        subelem.text = str( round( value, 3 ) )
 
     ### get ave clay in profile
     tot_clay = 0.0
@@ -504,7 +504,7 @@ def Create_Soil_XML( uuid, soil_df ):
     cona = [ cb[2] for cb in clay_bckts
     if ( ( cb[0][0] <= tot_clay ) & ( cb[0][1] > tot_clay ) ) ][0]
 
-    soil_wat = SubElement( soil_xml, 'SoilWater' )
+    """ soil_wat = SubElement( soil_xml, 'SoilWater' )
     sum_cona = SubElement( soil_wat, 'SummerCona' )
     sum_cona.text = str( cona )
     sum_u = SubElement( soil_wat, 'SummerU' )
@@ -540,7 +540,83 @@ def Create_Soil_XML( uuid, soil_df ):
     swcon = SubElement( soil_wat, 'SWCON' )
     for lyr in APSIM_Soil_Layers:
         subelem = SubElement( swcon, 'double' )
-        subelem.text = str( 0.5 )
+        subelem.text = str( 0.5 ) """
+    
+    ###SWIM for tile drainage and NO3 leaching
+    swim = SubElement(soil_xml, 'Swim')
+    salb = SubElement(swim, 'Salb').text = str(0.13)
+    cn2bare = SubElement(swim, 'CN2Bare').text = str(75)
+    cnred = SubElement(swim, 'CNRed').text = str(20)
+    cncov = SubElement(swim, 'CNCov').text = str(0.8)
+    kdul = SubElement(swim, 'KDul').text = str(0.1)
+    psidul = SubElement(swim, 'PSIDul').text = str(-100)
+    vc = SubElement(swim, 'VC').text = 'true'
+    dtmin = SubElement(swim, 'DTmin').text = str(0)
+    dtmax = SubElement(swim, 'DTmax').text = str(1440)
+    maxwater = SubElement(swim, 'MaxWaterIncrement').text = str(10)
+    spaceweight = SubElement(swim, 'SpaceWeightingFactor').text = str(0)
+    solutespace = SubElement(swim, 'SoluteSpaceWeightingFactor').text = str(0)
+    diagnostics = SubElement(swim, 'Diagnostics').text = 'true'
+    soluteparms = SubElement(swim, 'SwimSoluteParameters')
+    dis = SubElement(soluteparms, 'Dis').text = str(15)
+    disp = SubElement(soluteparms, 'Disp').text = str(1)
+    sp_a = SubElement(soluteparms, 'A').text = str(1)
+    dthc = SubElement(soluteparms, 'DTHC').text = str(1)
+    dthp = SubElement(soluteparms, 'DTHP').text = str(1)
+    wattabcl = SubElement(soluteparms, 'WaterTableCl').text = str(0)
+    wattabno3 = SubElement(soluteparms, 'WaterTableNO3').text = str(0)
+    wattabnh4 = SubElement(soluteparms, 'WaterTableNH4').text = str(0)
+    wattaburea = SubElement(soluteparms, 'WaterTableUrea').text = str(0)
+    wattabtracer = SubElement(soluteparms, 'WaterTableTracer').text = str(0)
+    mininhib = SubElement(soluteparms, 'WaterTableMineralisationInhibitor').text = str(0)
+    ureainhib = SubElement(soluteparms, 'WaterTableUreaseInhibitor').text = str(0)
+    nitrifinhib = SubElement(soluteparms, 'WaterTableNitrificationInhibitor').text = str(0)
+    denitrifinhib = SubElement(soluteparms, 'WaterTableDenitrificationInhibitor').text = str(0)
+    thickness = SubElement(soluteparms, 'Thickness')
+    double = SubElement(thickness, 'double').text = str(1000)
+    double = SubElement(thickness, 'double').text = str(1000)
+    double = SubElement(thickness, 'double').text = str(1000)
+    no3exco = SubElement(soluteparms, 'NO3Exco')
+    double = SubElement(no3exco, 'double').text = str(0)
+    double = SubElement(no3exco, 'double').text = str(0)
+    double = SubElement(no3exco, 'double').text = str(0)
+    no3fip = SubElement(soluteparms, 'NO3FIP')
+    double = SubElement(no3fip, 'double').text = str(1)
+    double = SubElement(no3fip, 'double').text = str(1)
+    double = SubElement(no3fip, 'double').text = str(1)
+    nh4exco = SubElement(soluteparms, 'NH4Exco')
+    double = SubElement(nh4exco, 'double').text = str(100)
+    double = SubElement(nh4exco, 'double').text = str(100)
+    double = SubElement(nh4exco, 'double').text = str(100)
+    nh4fip = SubElement(soluteparms, 'NH4FIP')
+    double = SubElement(nh4fip, 'double').text = str(1)
+    double = SubElement(nh4fip, 'double').text = str(1)
+    double = SubElement(nh4fip, 'double').text = str(1)
+    ureaexco = SubElement(soluteparms, 'UreaExco')        
+    double = SubElement(ureaexco, 'double').text = str(0)
+    double = SubElement(ureaexco, 'double').text = str(0)
+    double = SubElement(ureaexco, 'double').text = str(0)
+    ureafip = SubElement(soluteparms, 'UreaFIP')
+    double = SubElement(ureafip, 'double').text = str(1)
+    double = SubElement(ureafip, 'double').text = str(1)
+    double = SubElement(ureafip, 'double').text = str(1)
+    clexco = SubElement(soluteparms, 'ClExco')
+    double = SubElement(clexco, 'double').text = str(0)
+    double = SubElement(clexco, 'double').text = str(0)
+    double = SubElement(clexco, 'double').text = str(0)
+    clfip = SubElement(soluteparms, 'ClFIP')
+    double = SubElement(clfip, 'double').text = str(1)
+    double = SubElement(clfip, 'double').text = str(1)
+    double = SubElement(clfip, 'double').text = str(1)     
+    swimwtab = SubElement(swim, 'SwimWaterTable')
+    wattabdep = SubElement(swimwtab, 'WaterTableDepth').text = str(2000)
+    subdrain = SubElement(swim, 'SwimSubsurfaceDrain')
+    draindepth = SubElement(subdrain, 'DrainDepth').text = str(1100)
+    drainspacing = SubElement(subdrain, 'DrainSpacing').text = str(13500)
+    #using a drain radius for 4 inch tile
+    drainradius = SubElement(subdrain, 'DrainRadius').text = str(52)
+    klat = SubElement(subdrain, 'Klat').text = str(2800)
+    impermdepth = SubElement(subdrain, 'ImpermDepth').text = str(3900)
 
     ###
     som = SubElement( soil_xml, 'SoilOrganicMatter' )
