@@ -62,7 +62,8 @@ for idx,task in input_tasks.iterrows():
         from public.soil_samples
         where soil_sample_id::int4 = ''' + str( soil_id ) )
     soil_df = pd.read_sql( soil_query, dbconn )
-    soil_xml = Create_Soil_XML( uuid, soil_df, Run_SWIM = True, SaxtonRawls = False )
+    soil_xml = Create_Soil_XML(
+        uuid, soil_df, Run_SWIM = True, SaxtonRawls = True )
     area.append( soil_xml )
 
     ### generate .met files

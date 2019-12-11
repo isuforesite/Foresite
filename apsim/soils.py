@@ -130,9 +130,9 @@ def Add_SoilWat( hrzn_df ):
     sum_u.text = str( u )
     sum_date = SubElement( soil_wat, 'SummerDate' )
     sum_date.text = '1-Jun'
-    win_cona = SubElement( soil_wat, 'SummerCona' )
+    win_cona = SubElement( soil_wat, 'WinterCona' )
     win_cona.text = str( cona )
-    win_u = SubElement( soil_wat, 'SummerU' )
+    win_u = SubElement( soil_wat, 'WinterU' )
     win_u.text = str( u )
     win_date = SubElement( soil_wat, 'WinterDate' )
     win_date.text = '1-Dec'
@@ -277,9 +277,8 @@ def add_subelem( parent, child, value ):
 
     return subelem
 
-def Create_Soil_XML( uuid, soil_df, SSURGO = False, Run_SWIM = False, SaxtonRawls = False ):
-    # get soil record ID
-    soil_sample_id = soil_df.iloc[0][ 'soil_sample_id' ]
+def Create_Soil_XML( uuid, soil_df, SSURGO = False, Run_SWIM = False,
+    SaxtonRawls = False ):
 
     # set depth parameters based on layer value
     design_lyrs = [ 0, 20, 40, 60, 80, 100, 150, 200 ]
@@ -340,32 +339,49 @@ def Create_Soil_XML( uuid, soil_df, SSURGO = False, Run_SWIM = False, SaxtonRawl
     soil_df[ 'NH4' ] = soil_df[ 'om_r' ]
 
     # Saxton-Rawls calculations
-    S = soil_df[ 'sandtotal_r' ]
-    C = soil_df[ 'claytotal_r' ]
-    OM = soil_df[ 'om_r' ]
+    S = soil_df[ 'sandtotal_r' ] * 0.01
+    C = soil_df[ 'claytotal_r' ] * 0.01
+    OM = soil_df[ 'om_r' ] * 0.01
 
     # LL15
-    theta_1500t = -0.024 * S + 0.487 * C + 0.006 * OM + 0.005 * S * OM - 0.013 * C * OM + 0.068 * S * C + 0.031
+    theta_1500t = ( -0.024 * S + 0.487 * C + 0.006 * OM + 0.005 * S * OM
+        - 0.013 * C * OM + 0.068 * S * C + 0.031 )
     soil_df[ 'sr_LL15'] = theta_1500t + ( 0.14 * theta_1500t - 0.02 )
 
     # DUL
-    theta_33t = -0.251 * S + 0.195 * C + 0.011 * OM + 0.006 * S * OM - 0.027 * C * OM + 0.452 * S * C + 0.299
-    soil_df[ 'sr_DUL' ] = theta_33t + ( 1.283 * theta_33t**2 - 0.374 * theta_33t - 0.015 )
+    theta_33t = ( -0.251 * S + 0.195 * C + 0.011 * OM + 0.006 * S * OM
+        - 0.027 * C * OM + 0.452 * S * C + 0.299 )
+    soil_df[ 'sr_DUL' ] = theta_33t + (
+        1.283 * theta_33t**2 - 0.374 * theta_33t - 0.015 )
 
     # SAT
-    theta_s33t = 0.278 * S + 0.034 * C + 0.022 * OM - 0.018 * S * OM - 0.027 * C * OM - 0.584 * S * C + 0.078
+    theta_s33t = ( 0.278 * S + 0.034 * C + 0.022 * OM - 0.018 * S * OM
+        - 0.027 * C * OM - 0.584 * S * C + 0.078 )
     theta_s33 = theta_s33t + ( 0.636 * theta_s33t - 0.107 )
     soil_df[ 'sr_SAT' ] = soil_df[ 'sr_DUL' ] + theta_s33 - 0.097 * S + 0.043
+
+    # air dry
+    # 0 - 15 cm: 0.01 * 0.5 * wfifteenbar_r
+    # 15 - 30 cm: 0.01 * 0.75 * wfifteenbar_r
+    # > 30 cm: 0.01 * wfifteenbar_r
+    air_dry_1 = lambda df: df[ 'sr_LL15'] * 0.5 * 0.01
+    air_dry_2 = lambda df: df[ 'sr_LL15'] * 0.75 * 0.01
+    air_dry_3 = lambda df: df[ 'sr_LL15'] * 0.01
+    update_by_depth( soil_df, 'sr_AirDry', 0.0, 15.0, None, air_dry_1 )
+    update_by_depth( soil_df, 'sr_AirDry', 15.0, 30.0, None, air_dry_2 )
+    update_by_depth( soil_df, 'sr_AirDry', 30.0, None, None, air_dry_3 )
 
     # BD
     soil_df[ 'sr_BD' ] = ( 1 - soil_df[ 'sr_SAT' ] ) * 2.65
 
     # KS
-    B = ( np.log( 1500 ) - np.log( 33 ) )/( np.log( soil_df[ 'sr_DUL' ] ) - np.log( soil_df[ 'sr_LL15' ] ) )
+    B = ( ( np.log( 1500 ) - np.log( 33 ) )/
+        ( np.log( soil_df[ 'sr_DUL' ] ) - np.log( soil_df[ 'sr_LL15' ] ) ) )
     ks_lambda = 1/B
-    soil_df[ 'sr_KS' ] = 1930 * ( soil_df[ 'sr_SAT' ] - soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda )
+    soil_df[ 'sr_KS' ] = ( 1930 * ( soil_df[ 'sr_SAT' ]
+        - soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda ) )
 
-    print( soil_df )
+    soil_df.to_csv( 'tmp.txt', sep = '\t', header = True )
 
     # construct soil xml
     soil_xml = Element( 'Soil' )
@@ -381,33 +397,59 @@ def Create_Soil_XML( uuid, soil_df, SSURGO = False, Run_SWIM = False, SaxtonRawl
     water.append( Add_Soil_Crop( 'maize', soil_df ) )
     water.append( Add_Soil_Crop( 'soybean', soil_df ) )
 
-    ### layer thickness
     thickness = SubElement( water, 'Thickness' )
     add_subelems( thickness, 'double' )
 
-    ### bulk density
-    bulk_dens = SubElement( water, 'BD' )
-    add_subelems( bulk_dens, 'double', soil_df, 'BD' )
+    ### layer thickness
+    if SaxtonRawls:
+        ### bulk density
+        bulk_dens = SubElement( water, 'BD' )
+        add_subelems( bulk_dens, 'double', soil_df, 'sr_BD' )
 
-    ### air dry
-    air_dry = SubElement( water, 'AirDry' )
-    add_subelems( air_dry, 'double', soil_df, 'AirDry' )
+        ### air dry
+        air_dry = SubElement( water, 'AirDry' )
+        add_subelems( air_dry, 'double', soil_df, 'sr_AirDry' )
 
-    ### lower limit (wilting pt.)
-    ll15 = SubElement( water, 'LL15' )
-    add_subelems( ll15, 'double', soil_df, 'LL15' )
+        ### lower limit (wilting pt.)
+        ll15 = SubElement( water, 'LL15' )
+        add_subelems( ll15, 'double', soil_df, 'sr_LL15' )
 
-    ### drained upper limit (field cap.)
-    dul = SubElement( water, 'DUL' )
-    add_subelems( dul, 'double', soil_df, 'DUL' )
+        ### drained upper limit (field cap.)
+        dul = SubElement( water, 'DUL' )
+        add_subelems( dul, 'double', soil_df, 'sr_DUL' )
 
-    ### saturated water holding capacity
-    sat = SubElement( water, 'SAT' )
-    add_subelems( sat, 'double', soil_df, 'SAT' )
+        ### saturated water holding capacity
+        sat = SubElement( water, 'SAT' )
+        add_subelems( sat, 'double', soil_df, 'sr_SAT' )
 
-    ### saturated hydraulic conductivity
-    ks = SubElement( water, 'KS' )
-    add_subelems( ks, 'double', soil_df, 'KS' )
+        ### saturated hydraulic conductivity
+        ks = SubElement( water, 'KS' )
+        add_subelems( ks, 'double', soil_df, 'sr_KS' )
+
+    else:
+        ### bulk density
+        bulk_dens = SubElement( water, 'BD' )
+        add_subelems( bulk_dens, 'double', soil_df, 'BD' )
+
+        ### air dry
+        air_dry = SubElement( water, 'AirDry' )
+        add_subelems( air_dry, 'double', soil_df, 'AirDry' )
+
+        ### lower limit (wilting pt.)
+        ll15 = SubElement( water, 'LL15' )
+        add_subelems( ll15, 'double', soil_df, 'LL15' )
+
+        ### drained upper limit (field cap.)
+        dul = SubElement( water, 'DUL' )
+        add_subelems( dul, 'double', soil_df, 'DUL' )
+
+        ### saturated water holding capacity
+        sat = SubElement( water, 'SAT' )
+        add_subelems( sat, 'double', soil_df, 'SAT' )
+
+        ### saturated hydraulic conductivity
+        ks = SubElement( water, 'KS' )
+        add_subelems( ks, 'double', soil_df, 'KS' )
 
     # soil water module - SWIM or APSIM
     if Run_SWIM:
@@ -532,7 +574,39 @@ def Create_SSURGO_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False ):
     soil_df[ 'NO3' ] = soil_df[ 'om_r' ]
     soil_df[ 'NH4' ] = soil_df[ 'om_r' ]
 
-    print( soil_df )
+    # Saxton-Rawls calculations
+    S = soil_df[ 'sandtotal_r' ] * 0.01
+    C = soil_df[ 'claytotal_r' ] * 0.01
+    OM = soil_df[ 'om_r' ] * 0.01
+
+    # LL15
+    theta_1500t = ( -0.024 * S + 0.487 * C + 0.006 * OM + 0.005 * S * OM
+        - 0.013 * C * OM + 0.068 * S * C + 0.031 )
+    soil_df[ 'sr_LL15'] = theta_1500t + ( 0.14 * theta_1500t - 0.02 )
+
+    # DUL
+    theta_33t = ( -0.251 * S + 0.195 * C + 0.011 * OM + 0.006 * S * OM
+        - 0.027 * C * OM + 0.452 * S * C + 0.299 )
+    soil_df[ 'sr_DUL' ] = theta_33t + (
+        1.283 * theta_33t**2 - 0.374 * theta_33t - 0.015 )
+
+    # SAT
+    theta_s33t = ( 0.278 * S + 0.034 * C + 0.022 * OM - 0.018 * S * OM
+        - 0.027 * C * OM - 0.584 * S * C + 0.078 )
+    theta_s33 = theta_s33t + ( 0.636 * theta_s33t - 0.107 )
+    soil_df[ 'sr_SAT' ] = soil_df[ 'sr_DUL' ] + theta_s33 - 0.097 * S + 0.043
+
+    # BD
+    soil_df[ 'sr_BD' ] = ( 1 - soil_df[ 'sr_SAT' ] ) * 2.65
+
+    # KS
+    B = ( ( np.log( 1500 ) - np.log( 33 ) )/
+        ( np.log( soil_df[ 'sr_DUL' ] ) - np.log( soil_df[ 'sr_LL15' ] ) ) )
+    ks_lambda = 1/B
+    soil_df[ 'sr_KS' ] = ( 1930 * ( soil_df[ 'sr_SAT' ]
+        - soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda ) )
+
+    soil_df.to_csv( 'tmp.txt', sep = '\t', header = True )
 
     # construct soil xml
     soil_xml = Element( 'Soil' )
@@ -548,33 +622,59 @@ def Create_SSURGO_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False ):
     water.append( Add_Soil_Crop( 'maize', soil_df ) )
     water.append( Add_Soil_Crop( 'soybean', soil_df ) )
 
-    ### layer thickness
     thickness = SubElement( water, 'Thickness' )
     add_subelems( thickness, 'double' )
 
-    ### bulk density
-    bulk_dens = SubElement( water, 'BD' )
-    add_subelems( bulk_dens, 'double', soil_df, 'BD' )
+    ### layer thickness
+    if SaxtonRawls:
+        ### bulk density
+        bulk_dens = SubElement( water, 'BD' )
+        add_subelems( bulk_dens, 'double', soil_df, 'sr_BD' )
 
-    ### air dry
-    air_dry = SubElement( water, 'AirDry' )
-    add_subelems( air_dry, 'double', soil_df, 'AirDry' )
+        ### air dry
+        air_dry = SubElement( water, 'AirDry' )
+        add_subelems( air_dry, 'double', soil_df, 'sr_AirDry' )
 
-    ### lower limit (wilting pt.)
-    ll15 = SubElement( water, 'LL15' )
-    add_subelems( ll15, 'double', soil_df, 'LL15' )
+        ### lower limit (wilting pt.)
+        ll15 = SubElement( water, 'LL15' )
+        add_subelems( ll15, 'double', soil_df, 'sr_LL15' )
 
-    ### drained upper limit (field cap.)
-    dul = SubElement( water, 'DUL' )
-    add_subelems( dul, 'double', soil_df, 'DUL' )
+        ### drained upper limit (field cap.)
+        dul = SubElement( water, 'DUL' )
+        add_subelems( dul, 'double', soil_df, 'sr_DUL' )
 
-    ### saturated water holding capacity
-    sat = SubElement( water, 'SAT' )
-    add_subelems( sat, 'double', soil_df, 'SAT' )
+        ### saturated water holding capacity
+        sat = SubElement( water, 'SAT' )
+        add_subelems( sat, 'double', soil_df, 'sr_SAT' )
 
-    ### saturated hydraulic conductivity
-    ks = SubElement( water, 'KS' )
-    add_subelems( ks, 'double', soil_df, 'KS' )
+        ### saturated hydraulic conductivity
+        ks = SubElement( water, 'KS' )
+        add_subelems( ks, 'double', soil_df, 'sr_KS' )
+
+    else:
+        ### bulk density
+        bulk_dens = SubElement( water, 'BD' )
+        add_subelems( bulk_dens, 'double', soil_df, 'BD' )
+
+        ### air dry
+        air_dry = SubElement( water, 'AirDry' )
+        add_subelems( air_dry, 'double', soil_df, 'AirDry' )
+
+        ### lower limit (wilting pt.)
+        ll15 = SubElement( water, 'LL15' )
+        add_subelems( ll15, 'double', soil_df, 'LL15' )
+
+        ### drained upper limit (field cap.)
+        dul = SubElement( water, 'DUL' )
+        add_subelems( dul, 'double', soil_df, 'DUL' )
+
+        ### saturated water holding capacity
+        sat = SubElement( water, 'SAT' )
+        add_subelems( sat, 'double', soil_df, 'SAT' )
+
+        ### saturated hydraulic conductivity
+        ks = SubElement( water, 'KS' )
+        add_subelems( ks, 'double', soil_df, 'KS' )
 
     # soil water module - SWIM or APSIM
     if Run_SWIM:
