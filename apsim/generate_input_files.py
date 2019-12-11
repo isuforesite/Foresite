@@ -9,7 +9,7 @@ from wrapper import *
 dbconn = ConnectToDB()
 
 #####
-inpt_query = 'select * from test20.sample_inputs limit 5'
+inpt_query = 'select * from test20.sample_inputs limit 1'
 input_tasks = pd.read_sql( inpt_query, dbconn )
 
 folder_name = 'foresite'
@@ -59,10 +59,10 @@ for idx,task in input_tasks.iterrows():
     soil_query = (
         '''select
             *
-        from test20.design_soil
+        from public.soil_samples
         where soil_sample_id::int4 = ''' + str( soil_id ) )
     soil_df = pd.read_sql( soil_query, dbconn )
-    soil_xml = Create_Soil_XML( uuid, soil_df )
+    soil_xml = Create_Soil_XML( uuid, soil_df, Run_SWIM = True, SaxtonRawls = False )
     area.append( soil_xml )
 
     ### generate .met files
