@@ -2,7 +2,7 @@
 
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
-import math
+import numpy as np
 
 ###
 APSIM_Soil_Layers = [
@@ -83,7 +83,7 @@ def Add_Soil_Crop( crop, hrzn_df ):
 
     sc_kl = SubElement( soil_crp, 'KL' )
     for lyr in APSIM_Soil_Layers:
-        val = 0.08 * math.exp( -0.00654 * lyr[ 'min' ] )
+        val = 0.08 * np.exp( -0.00654 * lyr[ 'min' ] )
         subelem = SubElement( sc_kl, 'double' )
         subelem.text = str( round( val, 3 ) )
 
@@ -338,6 +338,32 @@ def Create_Soil_XML( uuid, soil_df, SSURGO = False, Run_SWIM = False, SaxtonRawl
     # init NO3 and NH4
     soil_df[ 'NO3' ] = soil_df[ 'om_r' ]
     soil_df[ 'NH4' ] = soil_df[ 'om_r' ]
+
+    # Saxton-Rawls calculations
+    S = soil_df[ 'sandtotal_r' ]
+    C = soil_df[ 'claytotal_r' ]
+    OM = soil_df[ 'om_r' ]
+
+    # LL15
+    theta_1500t = -0.024 * S + 0.487 * C + 0.006 * OM + 0.005 * S * OM - 0.013 * C * OM + 0.068 * S * C + 0.031
+    soil_df[ 'sr_LL15'] = theta_1500t + ( 0.14 * theta_1500t - 0.02 )
+
+    # DUL
+    theta_33t = -0.251 * S + 0.195 * C + 0.011 * OM + 0.006 * S * OM - 0.027 * C * OM + 0.452 * S * C + 0.299
+    soil_df[ 'sr_DUL' ] = theta_33t + ( 1.283 * theta_33t**2 - 0.374 * theta_33t - 0.015 )
+
+    # SAT
+    theta_s33t = 0.278 * S + 0.034 * C + 0.022 * OM - 0.018 * S * OM - 0.027 * C * OM - 0.584 * S * C + 0.078
+    theta_s33 = theta_s33t + ( 0.636 * theta_s33t - 0.107 )
+    soil_df[ 'sr_SAT' ] = soil_df[ 'sr_DUL' ] + theta_s33 - 0.097 * S + 0.043
+
+    # BD
+    soil_df[ 'sr_BD' ] = ( 1 - soil_df[ 'sr_SAT' ] ) * 2.65
+
+    # KS
+    B = ( np.log( 1500 ) - np.log( 33 ) )/( np.log( soil_df[ 'sr_DUL' ] ) - np.log( soil_df[ 'sr_LL15' ] ) )
+    ks_lambda = 1/B
+    soil_df[ 'sr_KS' ] = 1930 * ( soil_df[ 'sr_SAT' ] - soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda )
 
     print( soil_df )
 
