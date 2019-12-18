@@ -3,10 +3,10 @@
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
-from soils import *
-from database import *
-from op_manager import *
-from daymet import *
+import soils
+import database
+import op_manager
+import daymet
 
 ###
 def Set_Output_Variables( out_file, var_list, freq ):
@@ -34,8 +34,9 @@ def Set_Output_Variables( out_file, var_list, freq ):
     evnt = SubElement( evnts, 'event' )
     evnt.text = freq
 
-    return output_xml
+    output_xml.append( Add_XY_Graph( 'day', var_list ) )
 
+    return output_xml
 
 ###
 def Init_SurfaceOM( crop, type, mass, cn_ratio, stand_frac ):
@@ -63,3 +64,27 @@ def Init_SurfaceOM( crop, type, mass, cn_ratio, stand_frac ):
     sf_elem.text = str( stand_frac )
 
     return surfom_xml
+
+###
+def Add_XY_Graph( x_var, y_vars ):
+    graph = Element( 'Graph' )
+    graph.set( 'name', 'XY' )
+    legend = SubElement( graph, 'Legend' )
+    checked = SubElement( legend, 'CheckedTitles' )
+    plot = SubElement( graph, 'Plot' )
+    series = SubElement( plot, 'SeriesType' )
+    series.text = 'Solid line'
+    pt_type = SubElement( plot, 'PointType' )
+    pt_type.text = 'Circle'
+    col = SubElement( plot, 'colour' )
+    xvar = SubElement( plot, 'X' )
+    xvar.text = x_var
+    for yv in y_vars:
+        yvar = SubElement( plot, 'Y' )
+        yvar.text = yv
+
+    xtop = SubElement( plot, 'XTop' )
+    gdafile = SubElement( plot, 'GDApsimFileReader' )
+    gdafile.set( 'name', 'ApsimFileReader' )
+
+    return graph
