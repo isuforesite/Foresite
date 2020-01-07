@@ -14,11 +14,10 @@ import op_manager as ops
 dbconn = db.ConnectToDB()
 
 #####
-inpt_query = 'select * from test20.sample_inputs limit 1'
+inpt_query = 'select * from test20.sample_inputs limit 5'
 input_tasks = pd.read_sql( inpt_query, dbconn )
 
 folder_name = 'foresite'
-sim_name = 'sample_test'
 start_date = '01/01/2019'
 end_date = '31/12/2019'
 
@@ -40,7 +39,7 @@ for idx,task in input_tasks.iterrows():
     apsim_xml.set( 'creator', 'Apsim_Wrapper' )
     apsim_xml.set( 'name', 'S1' )
     sim = SubElement( apsim_xml, 'simulation' )
-    sim.set( 'name', sim_name )
+    sim.set( 'name', uuid )
     metfile = SubElement( sim, 'metfile' )
     metfile.set( 'name', 'foresite_weather' )
     filename = SubElement( metfile, 'filename' )
@@ -152,11 +151,15 @@ for idx,task in input_tasks.iterrows():
     dens = task[ 'sowing_density' ]
     depth = task[ 'sowing_depth' ]
     space = task[ 'row_spacing' ]
-    harvest = task[ 'harvest' ]
+    #harvest = task[ 'harvest' ]
     plant_date = get_date( task[ 'planting_dates' ] )
     plant_date = '/'.join( [ str( date ) for date in plant_date ] )
     oprns.append(
         ops.Add_Planting_Op( plant_date, crop, dens, depth, cult, space ) )
+
+    harvest_crop = task[ 'harvest' ]
+    harvest_date = str ( '15/10/2019' )
+    oprns.append(ops.Add_Harvest_Op(harvest_date, harvest_crop))
 
     area.append( man_xml )
 
