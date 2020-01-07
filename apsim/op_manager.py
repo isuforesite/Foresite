@@ -27,8 +27,8 @@ def Add_Till_Op( date, type, f_incorp = None, tillage_depth = None ):
 ###
 def Add_Fertilizer_Op( date, value, depth, type ):
     op_elem = Init_New_Op( date )
-    action = ( 'fertiliser apply ' +
-        'ammount = {} (kg/ha), depth = {} (mm), type = {}').format(
+    action = ( 'Fertiliser apply ' +
+        'amount = {} (kg/ha), depth = {} (mm), type = {} ()').format(
         str( value ), str( depth ), type )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action

@@ -1,3 +1,5 @@
 /.vscode
 /apsim/database.ini
 /apsim/__pycache__
+/apsim/apsim_files/**
+/apsim/tmp.txt
