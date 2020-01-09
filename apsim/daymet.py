@@ -15,7 +15,11 @@ daymet_endpt = 'https://daymet.ornl.gov/single-pixel/api/data'
 # snow-water equiv. (kg/m2)
 # vapor pressure (Pa)
 
-def GetDaymetDataBuffer( site, startyr, endyr, lat, lon,
+leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
+
+print( leap_years )
+
+def GetDaymetData( filepath, startyr, endyr, lat, lon,
     attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ] ):
     year_arr = [ str( startyr + i ) for i in range( endyr - startyr + 1 ) ]
     payload = {
@@ -27,24 +31,22 @@ def GetDaymetDataBuffer( site, startyr, endyr, lat, lon,
     req = requests.get( daymet_endpt, params = payload )
     df = pd.read_csv( io.StringIO( req.text ), sep = ',', header = 6 )
 
-    df.to_csv( 'IA169_1980_2018_wth.txt', header = True, sep = '\t' )
-
     df[ 'day' ] = df[ 'yday' ]
 
     #daylength (hours)
-    df[ 'dayL' ] = df[ 'dayl (s)' ]/3600
+    df[ 'dayL' ] = round( df[ 'dayl (s)' ]/3600, 1 )
 
     #solar radiation (MJ/m2)
-    df[ 'radn' ] = df[ 'srad (W/m^2)' ] * df[ 'dayl (s)' ] / 3600 * 0.0036
+    df[ 'radn' ] = round( df[ 'srad (W/m^2)' ] * df[ 'dayl (s)' ] / 3600 * 0.0036, 1 )
 
     #max temperature (deg C)
-    df[ 'maxt' ] = df[ 'tmax (deg c)' ]
+    df[ 'maxt' ] = round( df[ 'tmax (deg c)' ], 1 )
 
     #min temperature (deg C)
-    df[ 'mint' ] = df[ 'tmin (deg c)' ]
+    df[ 'mint' ] = round( df[ 'tmin (deg c)' ], 1 )
 
     #vapor pressure (kPa)
-    df[ 'vp' ] = df[ 'vp (Pa)' ] * 0.001
+    df[ 'vp' ] = round( df[ 'vp (Pa)' ] * 0.001, 1 )
 
     #snow and rain (mm)
     df[ 'rain' ] = 0.0
@@ -75,31 +77,30 @@ def GetDaymetDataBuffer( site, startyr, endyr, lat, lon,
                 df.iloc[idx][ 'rain' ] = row[ 'prcp (mm/day)' ]
 
     df = df[ [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain', 'snow',
-        'vp','dayL' ] ]
+        'vp', 'dayL' ] ]
 
-    filename = site + '_' + str( startyr ) + '_' + str( endyr ) + '.met'
-    headers = '\t'.join( [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
+    print( df )
+
+    headers = ' '.join( [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
         'snow', 'vp', 'dayL' ] )
-    units = '\t'.join( [ '()', '()', 'MJ/m^2', 'oC', 'oC', 'mm',
-        'mm', 'kPa', 'hours' ] )
+    units = ' '.join( [ '()', '()', '(MJ/m^2)', '(oC)', '(oC)', '(mm)', '(mm)',
+        '(kPa)', '(hours)' ] )
 
-    metfile = open( filename, 'w' )
-    metfile.write( '[weather.met.weather]\n' )
-    metfile.write( 'Location = ' + site + '\n' )
-    metfile.write( 'latitude = ' + str( lat ) + ' (DECIMAL DEGREES)\n' )
-    metfile.write( 'longitude = ' + str( lon ) + ' (DECIMAL DEGREES)\n' )
-    metfile.write( 'Elevation = ' + '\n' )
-    metfile.write( 'tav = ' + '\n' )
-    metfile.write( 'amp = ' + '\n' )
-    metfile.write( '! Foresite framework - Iowa State University\n' )
-    metfile.write( '! source: Daymet (daymet.ornl.gov)\n' )
-    metfile.write( headers + '\n' )
-    metfile.write( units + '\n' )
-    metfile.write( df.to_csv( sep = '\t', header = False, index = False ) )
+    metfile = open( filepath, 'w' )
+    metfile.write( '[weather.met.weather]\r\n' )
+    metfile.write( 'stateionname = Foresite generated weather\r\n')
+    metfile.write( 'latitude = {} (DECIMAL DEGREES)\r\n'.format( lat ) )
+    metfile.write( 'longitude = {} (DECIMAL DEGREES)\r\n'.format( lon ) )
+    metfile.write( 'tav = ' + str( round( df[ 'maxt' ].mean(), 1 ) ) + '\r\n' )
+    metfile.write( 'amp = ' + str( round( df[ 'maxt' ].max(), 1 ) ) + '\r\n' )
+    metfile.write( '!Weather generated using ISU Foresite framework\r\n')
+    metfile.write( headers + '\r\n' )
+    metfile.write( units + '\r\n' )
+    metfile.write( df.to_csv( sep = ' ', header = False, index = False,
+        line_terminator='\r\n' ) )
     metfile.close()
 
-    return
-
+    return df
 
 def Create_Met_Files( wth_df ):
     wth_sample_ids = wth_df[ 'weather_sample_id' ].unique()
