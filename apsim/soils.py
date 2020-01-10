@@ -602,6 +602,13 @@ def Create_SSURGO_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False ):
     ks_lambda = 1/B
     soil_df[ 'sr_KS' ] = ( 1930 * ( soil_df[ 'sr_SAT' ]
         - soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda ) )
+    
+    #If using SWIM, update last two KS soil layers to be a 'hole' at drainage depth with KS of 1.0 and 0.01, respectively.
+    if Run_SWIM:
+        update_by_depth( soil_df, 'KS', 100.0, 150.0, 1.0, None )
+        update_by_depth( soil_df, 'KS', 150.0, 200.0, 0.01, None )
+        update_by_depth( soil_df, 'sr_KS', 100.0, 150.0, 1.0, None )
+        update_by_depth( soil_df, 'sr_KS', 150.0, 200.0, 0.01, None )
 
     soil_df.to_csv( 'tmp.txt', sep = '\t', header = True )
 
@@ -676,8 +683,6 @@ def Create_SSURGO_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False ):
     # soil water module - SWIM or APSIM
     if Run_SWIM:
         soilwat = Add_SWIM()
-        update_by_depth( soil_df, 'KS', 100.0, 150.0, 1.0, None )
-        update_by_depth( soil_df, 'KS', 150.0, 200.0, 0.01, None )
     else:
         soilwat = Add_SoilWat( soil_df )
     soil_xml.append( soilwat )
