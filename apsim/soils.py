@@ -246,14 +246,12 @@ def update_by_depth( data, var, min, max, var_flat, var_lambda ):
         if max == None:
             data.loc[ ( data[ 'hzdepb_r' ] > min ), var ] = var_lambda( data )
         else:
-            data.loc[ ( data[ 'hzdept_r' ] <= max ) & ( data[ 'hzdepb_r' ] > min ),
-                var ] = var_lambda( data )
+            data.loc[ ( data[ 'hzdept_r' ] <= max ) & ( data[ 'hzdepb_r' ] > min ), var ] = var_lambda( data )
     elif var_flat != None:
         if max == None:
             data.loc[ ( data[ 'hzdepb_r' ] > min ), var ] = var_flat
         else:
-            data.loc[ ( data[ 'hzdept_r' ] <= max ) & ( data[ 'hzdepb_r' ] > min ),
-                var ] = var_flat
+            data.loc[ ( data[ 'hzdept_r' ] <= max ) & ( data[ 'hzdepb_r' ] > min ), var ] = var_flat
 
     return
 
@@ -277,16 +275,7 @@ def add_subelem( parent, child, value ):
 
     return subelem
 
-def Create_Soil_XML( uuid, soil_df, SSURGO = False, Run_SWIM = False,
-    SaxtonRawls = False ):
-
-    # set depth parameters based on layer value
-    design_lyrs = [ 0, 20, 40, 60, 80, 100, 150, 200 ]
-    bttms = [ x for x in design_lyrs ][1:]
-    tops = [ x for x in design_lyrs ][:-1]
-    for idx,lyr in enumerate( design_lyrs[1:] ):
-        soil_df.loc[ ( soil_df[ 'layer' ] == lyr ), 'hzdept_r' ] = tops[ idx ]
-        soil_df.loc[ ( soil_df[ 'layer' ] == lyr ), 'hzdepb_r' ] = bttms[ idx ]
+def Create_Soil_XML( uuid, soil_df, Run_SWIM = False, SaxtonRawls = False ):
 
     # bulk density
     soil_df[ 'BD' ] = soil_df[ 'dbthirdbar_r' ]

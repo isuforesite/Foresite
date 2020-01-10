@@ -4,8 +4,6 @@ import os
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
-import io
-
 import soils
 import wrapper as apsim
 import daymet as clim
@@ -15,51 +13,63 @@ import op_manager as ops
 # Connect to database
 dbconn = db.ConnectToDB()
 
-# query scenarios to generate inputs
-INPUT_QUERY = 'select * from sandbox.huc12_inputs limit 5'
-input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
+# Generate inputs for emulator design or using SSURGO and Daymet
+EMULATOR_soil_table = 'public.soil_samples'
+EMULATOR_wth_table = 'test20.design_weather'
 
+# query scenarios to generate inputs
+INPUT_QUERY = 'select * from test20.test20_inputs limit 5'
+
+input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 print( input_tasks )
 
-SIM_NAME = 'huc12_test_job'
-START_DATE = '01/01/2016'
+SIM_NAME = 'emulator_test_inputs'
+START_DATE = '01/01/2019'
 END_DATE = '31/12/2019'
 
 # create directories for dumping .apsim and .met files
-if not os.path.exists( 'apsim_files' ):
-    os.makedirs( 'apsim_files' )
-if not os.path.exists( 'apsim_files/met_files' ):
-    os.makedirs( 'apsim_files/met_files' )
+if not os.path.exists('apsim_files'):
+    os.makedirs('apsim_files')
+if not os.path.exists('apsim_files/met_files'):
+    os.makedirs('apsim_files/met_files')
 
 # loop of tasks
 for idx,task in input_tasks.iterrows():
     uuid = str( task[ 'uuid' ] )
-    mukey = task[ 'mukey' ]
-    fips = task[ 'fips' ]
-    lat = task[ 'wth_lat' ]
-    lon = task[ 'wth_lon' ]
+    soil_id = task[ 'soil_sample_id' ]
+    wth_id = task[ 'weather_sample_id' ]
 
     # get soils data
-    soil_query = '''select * from
-        api.get_soil_properties( array[{}]::text[] )'''.format( mukey )
+    soil_query = '''select * from public.soil_samples
+        where soil_sample_id::int4 = {}'''.format( soil_id )
     soil_df = pd.read_sql( soil_query, dbconn )
+    # correct depth
+    design_lyrs = [ 0, 20, 40, 60, 80, 100, 150, 200 ]
+    bttms = [ x for x in design_lyrs ][1:]
+    tops = [ x for x in design_lyrs ][:-1]
+    print( soil_df )
+
+    for idx,lyr in enumerate( design_lyrs[1:] ):
+        soil_df.loc[ ( soil_df[ 'layer' ] == lyr ), 'hzdept_r' ] = tops[ idx ]
+        soil_df.loc[ ( soil_df[ 'layer' ] == lyr ), 'hzdepb_r' ] = bttms[ idx ]
+
     if soil_df.empty:
         continue
 
     # generate .met files
-    met_path = 'met_files/weather_{}.met'.format( fips )
-    if not os.path.exists( 'apsim_files/' + met_path ):
-        clim.GetDaymetData( 'apsim_files/' + met_path, 1980, 2018, lat, lon )
+    wth_query = '''select * from test20.design_weather
+        where weather_sample_id::int4 = {}'''.format( wth_id )
+    wth_df = pd.read_sql( wth_query, dbconn )
+    clim.Create_Met_Files( wth_df )
 
     # initialize .apsim xml
+    met_path = 'met_files/weather_{}.met'.format( wth_id )
     apsim_xml = Element( 'folder' )
     apsim_xml.set( 'version', '36' )
     apsim_xml.set( 'creator', 'Apsim_Wrapper' )
     apsim_xml.set( 'name', 'S1' )
     sim = SubElement( apsim_xml, 'simulation' )
-
     sim.set( 'name', SIM_NAME )
-
     metfile = SubElement( sim, 'metfile' )
     metfile.set( 'name', 'foresite_weather' )
     filename = SubElement( metfile, 'filename' )
@@ -105,38 +115,9 @@ for idx,task in input_tasks.iterrows():
         'surfaceom_c',
         'subsurface_drain',
         'subsurface_drain_no3',
-        'leach_no3',
-        'corn_buac',
-        'soy_buac' ]
-
+        'leach_no3' ]
     output_xml = apsim.Set_Output_Variables( uuid + '.out', outvars, 'daily' )
     area.append( output_xml )
-
-    graph_no3 = [
-        'Cumulative subsurface_drain',
-        'Cumulative subsurface_drain_no3',
-        'Cumulative leach_no3'
-    ]
-    graph_yield = [
-        'yield',
-        'biomass',
-        'corn_buac'
-    ]
-    graph_all = [
-        'yield',
-        'biomass',
-        'fertiliser',
-        'surfaceom_c',
-        'Cumulative subsurface_drain',
-        'Cumulative subsurface_drain_no3',
-        'Cumulative leach_no3',
-        'corn_buac',
-        'soy_buac' 
-    ]
-
-    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_no3, 'no3' ) )
-    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_yield, 'yield' ) )
-    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_all, 'all outputs' ) )
 
     month_ids = {
         'jan': 1,
@@ -153,12 +134,8 @@ for idx,task in input_tasks.iterrows():
         'dec': 12
     }
 
-    #Manager and operations folder
     man_xml = Element( 'folder' )
     man_xml.set( 'name', 'Manager folder' )
-
-    man_xml.append(ops.Add_Empty_Manager())
-
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 
@@ -189,15 +166,11 @@ for idx,task in input_tasks.iterrows():
     dens = task[ 'sowing_density' ]
     depth = task[ 'sowing_depth' ]
     space = task[ 'row_spacing' ]
-    #harvest = task[ 'harvest' ]
+    harvest = task[ 'harvest' ]
     plant_date = get_date( task[ 'planting_dates' ] )
     plant_date = '/'.join( [ str( date ) for date in plant_date ] )
     oprns.append(
         ops.Add_Planting_Op( plant_date, crop, dens, depth, cult, space ) )
-
-    harvest_crop = task[ 'harvest' ]
-    harvest_date = str ( '15/10/2019' )
-    oprns.append(ops.Add_Harvest_Op(harvest_date, harvest_crop))
 
     area.append( man_xml )
 
