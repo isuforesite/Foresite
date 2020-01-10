@@ -100,9 +100,38 @@ for idx,task in input_tasks.iterrows():
         'surfaceom_c',
         'subsurface_drain',
         'subsurface_drain_no3',
-        'leach_no3' ]
+        'leach_no3',
+        'corn_buac',
+        'soy_buac' ]
+
     output_xml = apsim.Set_Output_Variables( uuid + '.out', outvars, 'daily' )
     area.append( output_xml )
+
+    graph_no3 = [
+        'Cumulative subsurface_drain',
+        'Cumulative subsurface_drain_no3',
+        'Cumulative leach_no3'
+    ]
+    graph_yield = [
+        'yield',
+        'biomass',
+        'corn_buac'
+    ]
+    graph_all = [
+        'yield',
+        'biomass',
+        'fertiliser',
+        'surfaceom_c',
+        'Cumulative subsurface_drain',
+        'Cumulative subsurface_drain_no3',
+        'Cumulative leach_no3',
+        'corn_buac',
+        'soy_buac' 
+    ]
+
+    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_no3, 'no3' ) )
+    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_yield, 'yield' ) )
+    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_all, 'all outputs' ) )
 
     month_ids = {
         'jan': 1,
@@ -119,8 +148,12 @@ for idx,task in input_tasks.iterrows():
         'dec': 12
     }
 
+    #Manager and operations folder
     man_xml = Element( 'folder' )
     man_xml.set( 'name', 'Manager folder' )
+
+    man_xml.append(ops.Add_Empty_Manager())
+
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 

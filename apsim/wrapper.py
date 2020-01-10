@@ -34,8 +34,6 @@ def Set_Output_Variables( out_file, var_list, freq ):
     evnt = SubElement( evnts, 'event' )
     evnt.text = freq
 
-    output_xml.append( Add_XY_Graph( 'day', var_list ) )
-
     return output_xml
 
 ###
@@ -66,9 +64,9 @@ def Init_SurfaceOM( crop, type, mass, cn_ratio, stand_frac ):
     return surfom_xml
 
 ###
-def Add_XY_Graph( x_var, y_vars ):
+def Add_XY_Graph( x_var, y_vars, title ):
     graph = Element( 'Graph' )
-    graph.set( 'name', 'XY' )
+    graph.set( 'name', title )
     legend = SubElement( graph, 'Legend' )
     checked = SubElement( legend, 'CheckedTitles' )
     plot = SubElement( graph, 'Plot' )

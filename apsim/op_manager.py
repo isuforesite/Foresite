@@ -109,8 +109,40 @@ def Add_Management_Oprns( calender ):
 
     return man_xml
 
+#Add empty manager with bu/ac for corn/soy and the gradient for SWIM to work.
+def Add_Empty_Manager(gradient=-1):
+    """
+    Creates an empty APSIM 'Manager' folder to hold bu/ac calculationg and
+    SWIM bbc_gradient custom value - SWIM will not produce subsurface output
+    without the gradient set.
+    
+    Returns:
+        [xml] -- [XML for an empty manager]
+    """
+    empty_man = Element( 'manager' )
+    empty_man.set( 'name', 'Empty manager' )
+    init_script = SubElement( empty_man, 'script' )
+    init_script_text = SubElement( init_script, 'text' )
+    init_event = SubElement( init_script, 'event' ).text = 'init'
 
+    gradient_script = SubElement( empty_man, 'script' )
+    gradient_script_txt = SubElement( gradient_script, 'text' )
+    
+    #!!!!IMPORTANT!!!!!
+    #subsurface_drain and subsurface_drain_no3 won't work unless gradient is set
+    #HOWEVER if gradient is set, then leach_no3 will cease functioning
+    #!!!!!!!!!!!!!!!!!!
+    gradient_script_txt.text = """corn_buac   = maize.yield * 0.0159/0.85  ! corn yield in bushels/acre@15% moisture
+!soy_buac   = soybean.yield * 0.0149/0.87  !  soybean yield in bushels/acre
 
+bbc_gradient = {}""".format(gradient)
+    gradient_event = SubElement( gradient_script, 'event' ).text = 'start_of_day'
+
+    end_script = SubElement( empty_man, 'script' )
+    end_script_text = SubElement( end_script, 'text' )
+    end_event = SubElement( end_script, 'event' ).text = 'end_of_day' 
+
+    return empty_man
 #
 # Add_Till_Op( '13/4/2007', 'user_defined', 0.0, 50.0 )
 # Add_Fertilizer_Op( '14/4/2007', 25.0, 10.0, 'urea_no3' )
