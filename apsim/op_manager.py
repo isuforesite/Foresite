@@ -110,10 +110,10 @@ def Add_Management_Oprns( calender ):
     return man_xml
 
 #Add empty manager with bu/ac for corn/soy and the gradient for SWIM to work.
-def Add_Empty_Manager(gradient=-1):
+def Add_Empty_Manager(bbc_potential=[200,100]):
     """
     Creates an empty APSIM 'Manager' folder to hold bu/ac calculationg and
-    SWIM bbc_gradient custom value - SWIM will not produce subsurface output
+    SWIM bbc_potential = profile depth - tile/water table depth
     without the gradient set.
     
     Returns:
@@ -129,13 +129,15 @@ def Add_Empty_Manager(gradient=-1):
     gradient_script_txt = SubElement( gradient_script, 'text' )
     
     #!!!!IMPORTANT!!!!!
-    #subsurface_drain and subsurface_drain_no3 won't work unless gradient is set
-    #HOWEVER if gradient is set, then leach_no3 will cease functioning
+    #subsurface_drain and subsurface_drain_no3 won't work unless bbc_potential is se
     #!!!!!!!!!!!!!!!!!!
+    
     gradient_script_txt.text = """corn_buac   = maize.yield * 0.0159/0.85  ! corn yield in bushels/acre@15% moisture
 !soy_buac   = soybean.yield * 0.0149/0.87  !  soybean yield in bushels/acre
 
-bbc_gradient = {}""".format(gradient)
+!bbc_gradient = -1
+bbc_potential = {} - {}
+""".format(bbc_potential[0],bbc_potential[1])
     gradient_event = SubElement( gradient_script, 'event' ).text = 'start_of_day'
 
     end_script = SubElement( empty_man, 'script' )
