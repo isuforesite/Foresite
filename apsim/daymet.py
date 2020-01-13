@@ -15,12 +15,10 @@ daymet_endpt = 'https://daymet.ornl.gov/single-pixel/api/data'
 # snow-water equiv. (kg/m2)
 # vapor pressure (Pa)
 
-leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
-
-print( leap_years )
-
 def GetDaymetData( filepath, startyr, endyr, lat, lon,
     attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ] ):
+    leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
+
     year_arr = [ str( startyr + i ) for i in range( endyr - startyr + 1 ) ]
     payload = {
         'lat': str( lat ),
@@ -52,9 +50,22 @@ def GetDaymetData( filepath, startyr, endyr, lat, lon,
     df[ 'rain' ] = 0.0
     df[ 'snow' ] = 0.0
 
-    #check is snow-water equivalent increases next day
-    for idx, row in df.iterrows():
+    # The Daymet calendar is based on a standard calendar year. All Daymet
+    # years have 1 - 365 days, including leap years. For leap years, the Daymet
+    # database includes leap day. Values for December 31 are discarded from
+    # leap years to maintain a 365-day year.
+    for lp_yr in leap_years:
+        lp_day = df.loc[ ( df[ 'year' ] == lp_yr ) &
+            ( df[ 'day' ] == 365 ) ].copy( deep = True )
+        lp_day[ 'day' ] = 366
+        lp_day[ 'yday' ] = 366
 
+        df = df.append( lp_day, ignore_index = True )
+
+    df = df.sort_values( by = [ 'year', 'yday' ] )
+
+    #check if snow-water equivalent increases next day
+    for idx, row in df.iterrows():
         if idx == 0:
             df.iloc[idx][ 'snow' ] = 0.0
             df.iloc[idx][ 'rain' ] = row[ 'prcp (mm/day)' ]
@@ -78,8 +89,6 @@ def GetDaymetData( filepath, startyr, endyr, lat, lon,
 
     df = df[ [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain', 'snow',
         'vp', 'dayL' ] ]
-
-    print( df )
 
     headers = ' '.join( [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
         'snow', 'vp', 'dayL' ] )
