@@ -9,7 +9,7 @@ import op_manager
 import daymet
 
 ###
-def Set_Output_Variables( out_file, var_list, freq ):
+def Set_Output_Variables( out_file, var_list ):
     output_xml = Element( 'outputfile' )
     filename = SubElement( output_xml, 'filename' )
     filename.set( 'name', 'filename' )
@@ -32,7 +32,12 @@ def Set_Output_Variables( out_file, var_list, freq ):
     evnts = SubElement( output_xml, 'events' )
     evnts.set( 'name', 'Output variable events' )
     evnt = SubElement( evnts, 'event' )
-    evnt.text = freq
+    evnt.text = 'daily'
+
+    var_list = [ var for var in var_list
+        if var not in [ 'dd/mm/yyyy as Date', 'day', 'year' ] ]
+
+    output_xml.append( Add_XY_Graph( 'Date', var_list ) )
 
     return output_xml
 
@@ -81,7 +86,6 @@ def Add_XY_Graph( x_var, y_vars, title ):
         yvar = SubElement( plot, 'Y' )
         yvar.text = yv
 
-    xtop = SubElement( plot, 'XTop' )
     gdafile = SubElement( plot, 'GDApsimFileReader' )
     gdafile.set( 'name', 'ApsimFileReader' )
 
