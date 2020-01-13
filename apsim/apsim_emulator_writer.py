@@ -199,6 +199,13 @@ for idx,task in input_tasks.iterrows():
     oprns.append(
         ops.Add_Planting_Op( plant_date, crop, dens, depth, cult, space ) )
 
+    harvest_crop = task[ 'harvest' ]
+    if crop == 'maize':
+        harvest_date = str ( '15/10/2018' )
+    elif crop == 'soybean':
+        harvest_date = str ( '01/10/2018' )
+    oprns.append(ops.Add_Harvest_Op(harvest_date, harvest_crop))
+
     area.append( man_xml )
 
     outfile = 'apsim_files/{}.apsim'.format( uuid )
