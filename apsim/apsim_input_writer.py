@@ -22,8 +22,8 @@ input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 print( input_tasks )
 
 SIM_NAME = 'huc12_test_job'
-START_DATE = '01/01/2016'
-END_DATE = '31/12/2019'
+START_DATE = '01/01/2018'
+END_DATE = '31/12/2018'
 
 # create directories for dumping .apsim and .met files
 if not os.path.exists( 'apsim_files' ):
@@ -108,8 +108,7 @@ for idx,task in input_tasks.iterrows():
         'leach_no3',
         'corn_buac',
         'soy_buac' ]
-
-    output_xml = apsim.Set_Output_Variables( uuid + '.out', outvars, 'daily' )
+    output_xml = apsim.Set_Output_Variables( uuid + '.out', outvars )
     area.append( output_xml )
 
     graph_no3 = [
@@ -131,7 +130,7 @@ for idx,task in input_tasks.iterrows():
         'Cumulative subsurface_drain_no3',
         'Cumulative leach_no3',
         'corn_buac',
-        'soy_buac' 
+        'soy_buac'
     ]
 
     output_xml.append( apsim.Add_XY_Graph( 'Date', graph_no3, 'no3' ) )
@@ -162,7 +161,7 @@ for idx,task in input_tasks.iterrows():
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 
-    spec_yr = 2019
+    spec_yr = 2018
     get_date = lambda d : ( [ d.split( '-' )[0], month_ids[ d.split( '-' )[1] ],
         spec_yr ] )
 
@@ -189,14 +188,17 @@ for idx,task in input_tasks.iterrows():
     dens = task[ 'sowing_density' ]
     depth = task[ 'sowing_depth' ]
     space = task[ 'row_spacing' ]
-    #harvest = task[ 'harvest' ]
+
     plant_date = get_date( task[ 'planting_dates' ] )
     plant_date = '/'.join( [ str( date ) for date in plant_date ] )
     oprns.append(
         ops.Add_Planting_Op( plant_date, crop, dens, depth, cult, space ) )
 
     harvest_crop = task[ 'harvest' ]
-    harvest_date = str ( '15/10/2019' )
+    if crop == 'maize':
+        harvest_date = str ( '15/10/2018' )
+    elif crop == 'soybean':
+        harvest_date = str ( '01/10/2018' )
     oprns.append(ops.Add_Harvest_Op(harvest_date, harvest_crop))
 
     area.append( man_xml )
