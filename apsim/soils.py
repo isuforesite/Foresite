@@ -275,7 +275,7 @@ def add_subelem( parent, child, value ):
 
     return subelem
 
-def Create_Soil_XML( uuid, soil_df, Run_SWIM = False, SaxtonRawls = False ):
+def Create_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False ):
 
     # bulk density
     soil_df[ 'BD' ] = soil_df[ 'dbthirdbar_r' ]
@@ -377,7 +377,7 @@ def Create_Soil_XML( uuid, soil_df, Run_SWIM = False, SaxtonRawls = False ):
         update_by_depth( soil_df, 'sr_KS', 100.0, 150.0, 1.0, None )
         update_by_depth( soil_df, 'sr_KS', 150.0, 200.0, 0.01, None )
 
-    
+
     soil_df.to_csv( 'tmp.txt', sep = '\t', header = True )
 
     # construct soil xml
@@ -393,6 +393,7 @@ def Create_Soil_XML( uuid, soil_df, Run_SWIM = False, SaxtonRawls = False ):
     water = SubElement( soil_xml, 'Water' )
     water.append( Add_Soil_Crop( 'maize', soil_df ) )
     water.append( Add_Soil_Crop( 'soybean', soil_df ) )
+    water.append( Add_Soil_Crop( 'wheat', soil_df ) )
 
     thickness = SubElement( water, 'Thickness' )
     add_subelems( thickness, 'double' )
@@ -602,7 +603,7 @@ def Create_SSURGO_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False ):
     ks_lambda = 1/B
     soil_df[ 'sr_KS' ] = ( 1930 * ( soil_df[ 'sr_SAT' ]
         - soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda ) )
-    
+
     #If using SWIM, update last two KS soil layers to be a 'hole' at drainage depth with KS of 1.0 and 0.01, respectively.
     if Run_SWIM:
         update_by_depth( soil_df, 'KS', 100.0, 150.0, 1.0, None )
@@ -625,6 +626,7 @@ def Create_SSURGO_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False ):
     water = SubElement( soil_xml, 'Water' )
     water.append( Add_Soil_Crop( 'maize', soil_df ) )
     water.append( Add_Soil_Crop( 'soybean', soil_df ) )
+    water.append( Add_Soil_Crop( 'wheat', soil_df ) )
 
     thickness = SubElement( water, 'Thickness' )
     add_subelems( thickness, 'double' )
