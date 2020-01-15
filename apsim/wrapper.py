@@ -37,7 +37,7 @@ def Set_Output_Variables( out_file, var_list ):
     var_list = [ var for var in var_list
         if var not in [ 'dd/mm/yyyy as Date', 'day', 'year' ] ]
 
-    output_xml.append( Add_XY_Graph( 'Date', var_list ) )
+    output_xml.append( Add_XY_Graph( 'Date', var_list, 'Outputs' ) )
 
     return output_xml
 
@@ -71,7 +71,7 @@ def Init_SurfaceOM( crop, type, mass, cn_ratio, stand_frac ):
 ###
 def Add_XY_Graph( x_var, y_vars, title ):
     graph = Element( 'Graph' )
-    graph.set( 'name', title )
+    graph.set( 'name', 'Output Plot' )
     legend = SubElement( graph, 'Legend' )
     checked = SubElement( legend, 'CheckedTitles' )
     plot = SubElement( graph, 'Plot' )
@@ -90,3 +90,6 @@ def Add_XY_Graph( x_var, y_vars, title ):
     gdafile.set( 'name', 'ApsimFileReader' )
 
     return graph
+
+# ###
+# def Add_Soil( )
