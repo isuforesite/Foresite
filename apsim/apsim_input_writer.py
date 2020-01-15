@@ -5,6 +5,7 @@ import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 import io
+import json
 
 import soils
 import wrapper as apsim
@@ -22,8 +23,96 @@ input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 print( input_tasks )
 
 SIM_NAME = 'huc12_test_job'
-START_DATE = '01/01/2018'
+START_DATE = '01/01/2016'
 END_DATE = '31/12/2018'
+
+### constant spin up crops for multi-year rotation
+spin_up_corn = {
+    'implement': 'disc',
+    'depth': 178,
+    'residue_incorporation': 0.70,
+    'timing': '10-apr',
+    'kg_n_ha': 220,
+    'fertilize_n_on': '18-may',
+    'n_fertilizer': 'uan_n',
+    'sow_crop': 'maize',
+    'cultivar': 'B_105',
+    'planting_dates': '18-may',
+    'sowing_density': 8,
+    'sowing_depth': 51,
+    'row_spacing': 381,
+    'harvest': 'maize',
+    'harvest_date': '15-oct'
+}
+
+spin_up_soybean = {
+    'implement': 'disc',
+    'depth': 178,
+    'residue_incorporation': 0.70,
+    'timing': '25-apr',
+    'kg_n_ha': None,
+    'fertilize_n_on': None,
+    'n_fertilizer': None,
+    'sow_crop': 'soybean',
+    'cultivar': 'IA_2008_2.0',
+    'planting_dates': '18-may',
+    'sowing_density': 30,
+    'sowing_depth': 51,
+    'row_spacing': 381,
+    'harvest': 'maize',
+    'harvest_date': '1-oct'
+}
+
+def Get_Date( date_str, year ):
+    month_ids = {
+        'jan': 1, 'feb': 2, 'mar': 3,
+        'apr': 4, 'may': 5, 'jun': 6,
+        'jul': 7, 'aug': 8, 'sep': 9,
+        'oct': 10, 'nov': 11, 'dec': 12
+    }
+    date = [ date_str.split( '-' )[0],
+        month_ids[ date_str.split( '-' )[1] ],
+        year ]
+    date = '/'.join( [ str( d ) for d in date ] )
+
+    return date
+
+def Add_Management_Year( oprns, task, year ):
+    ### tillage specs
+    till_imp = task[ 'implement' ]
+    till_depth = task[ 'depth' ]
+    till_incorp = task[ 'residue_incorporation' ]
+    till_date = Get_Date( task[ 'timing' ], year )
+    ops.Add_Till_Op( oprns, till_date, 'user_defined', till_incorp,
+        till_depth )
+
+    ### fert specs
+    n_rate = task[ 'kg_n_ha' ]
+    n_type = task[ 'n_fertilizer' ]
+    n_depth = 0.0
+    if n_rate != None and n_rate > 0.0:
+        n_date = Get_Date( task[ 'fertilize_n_on' ], year )
+        ops.Add_Fertilizer_Op( oprns, n_date, n_rate, n_depth, n_type )
+
+    ### planting specs
+    crop = task[ 'sow_crop' ]
+    cult = task[ 'cultivar' ]
+    dens = task[ 'sowing_density' ]
+    depth = task[ 'sowing_depth' ]
+    space = task[ 'row_spacing' ]
+
+    plant_date = Get_Date( task[ 'planting_dates' ], year )
+    ops.Add_Planting_Op( oprns, plant_date, crop, dens, depth, cult, space )
+
+    harvest_crop = task[ 'harvest' ]
+    if crop == 'maize':
+        harvest_date = str ( '15-oct' )
+    elif crop == 'soybean':
+        harvest_date = str ( '1-oct' )
+    harvest_date = Get_Date( harvest_date, year )
+    ops.Add_Harvest_Op( oprns, harvest_date, harvest_crop )
+
+    return
 
 # create directories for dumping .apsim and .met files
 if not os.path.exists( 'apsim_files' ):
@@ -80,7 +169,9 @@ for idx,task in input_tasks.iterrows():
     area.set( 'name', 'paddock' )
 
     # add soil xml
-    soil_xml = soils.Create_Soil_XML( uuid, soil_df, Run_SWIM = True,
+    soil_xml = soils.Create_Soil_XML(
+        soil_df,
+        Run_SWIM = True,
         SaxtonRawls = True )
     area.append( soil_xml )
 
@@ -93,21 +184,16 @@ for idx,task in input_tasks.iterrows():
 
     ### crops
     crop_xml = SubElement( area, 'maize' )
+    crop_xml = SubElement( area, 'soybean' )
+    crop_xml = SubElement( area, 'wheat' )
 
     ### output file
     outvars = [
-        'dd/mm/yyyy as Date',
-        'day',
-        'year',
-        'yield',
-        'biomass',
-        'fertiliser',
-        'surfaceom_c',
-        'subsurface_drain',
-        'subsurface_drain_no3',
-        'leach_no3',
-        'corn_buac',
-        'soy_buac' ]
+        'dd/mm/yyyy as Date', 'day', 'year',
+        'yield', 'biomass', 'fertiliser',
+        'surfaceom_c', 'subsurface_drain',
+        'subsurface_drain_no3', 'leach_no3',
+        'corn_buac', 'soy_buac' ]
     output_xml = apsim.Set_Output_Variables( uuid + '.out', outvars )
     area.append( output_xml )
 
@@ -122,14 +208,10 @@ for idx,task in input_tasks.iterrows():
         'corn_buac'
     ]
     graph_all = [
-        'yield',
-        'biomass',
-        'fertiliser',
-        'surfaceom_c',
-        'Cumulative subsurface_drain',
+        'yield', 'biomass', 'fertiliser',
+        'surfaceom_c', 'Cumulative subsurface_drain',
         'Cumulative subsurface_drain_no3',
-        'Cumulative leach_no3',
-        'corn_buac',
+        'Cumulative leach_no3', 'corn_buac',
         'soy_buac'
     ]
 
@@ -137,69 +219,18 @@ for idx,task in input_tasks.iterrows():
     output_xml.append( apsim.Add_XY_Graph( 'Date', graph_yield, 'yield' ) )
     output_xml.append( apsim.Add_XY_Graph( 'Date', graph_all, 'all outputs' ) )
 
-    month_ids = {
-        'jan': 1,
-        'feb': 2,
-        'mar': 3,
-        'apr': 4,
-        'may': 5,
-        'jun': 6,
-        'jul': 7,
-        'aug': 8,
-        'sep': 9,
-        'oct': 10,
-        'nov': 11,
-        'dec': 12
-    }
-
     #Manager and operations folder
     man_xml = Element( 'folder' )
     man_xml.set( 'name', 'Manager folder' )
 
-    man_xml.append(ops.Add_Empty_Manager())
+    man_xml.append( ops.Add_Empty_Manager() )
 
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 
-    spec_yr = 2018
-    get_date = lambda d : ( [ d.split( '-' )[0], month_ids[ d.split( '-' )[1] ],
-        spec_yr ] )
-
-    ### tillage specs
-    till_imp = task[ 'implement' ]
-    till_depth = task[ 'depth' ]
-    till_incorp = task[ 'residue_incorporation' ]
-    till_date = get_date( task[ 'timing' ] )
-    till_date = '/'.join( [ str( date ) for date in till_date ] )
-    oprns.append(
-        ops.Add_Till_Op( till_date, 'user_defined', till_incorp, till_depth ) )
-
-    ### fert specs
-    n_rate = task[ 'kg_n_ha' ]
-    n_type = task[ 'n_fertilizer' ]
-    n_depth = 0.0
-    n_date = get_date( task[ 'fertilize_n_on' ] )
-    n_date = '/'.join( [ str( date ) for date in n_date ] )
-    oprns.append( ops.Add_Fertilizer_Op( n_date, n_rate, n_depth, n_type ) )
-
-    ### planting specs
-    crop = task[ 'sow_crop' ]
-    cult = task[ 'cultivar' ]
-    dens = task[ 'sowing_density' ]
-    depth = task[ 'sowing_depth' ]
-    space = task[ 'row_spacing' ]
-
-    plant_date = get_date( task[ 'planting_dates' ] )
-    plant_date = '/'.join( [ str( date ) for date in plant_date ] )
-    oprns.append(
-        ops.Add_Planting_Op( plant_date, crop, dens, depth, cult, space ) )
-
-    harvest_crop = task[ 'harvest' ]
-    if crop == 'maize':
-        harvest_date = str ( '15/10/2018' )
-    elif crop == 'soybean':
-        harvest_date = str ( '01/10/2018' )
-    oprns.append(ops.Add_Harvest_Op(harvest_date, harvest_crop))
+    Add_Management_Year( oprns, spin_up_corn, 2016 )
+    Add_Management_Year( oprns, spin_up_soybean, 2017 )
+    Add_Management_Year( oprns, task, 2018 )
 
     area.append( man_xml )
 
