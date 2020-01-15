@@ -9,10 +9,11 @@ def Init_New_Op( date ):
     op_elem.set( 'condition', 'start_of_day' )
     date_elem = SubElement( op_elem, 'date' )
     date_elem.text = date
+
     return op_elem
 
 ###
-def Add_Till_Op( date, type, f_incorp = None, tillage_depth = None ):
+def Add_Till_Op( ops_xml, date, type, f_incorp = None, tillage_depth = None ):
     op_elem = Init_New_Op( date )
     if type == 'user_defined':
         action = ( 'SurfaceOrganicMatter tillage type = user_defined, ' +
@@ -22,20 +23,24 @@ def Add_Till_Op( date, type, f_incorp = None, tillage_depth = None ):
         action = 'SurfaceOrganicMatter tillage type = ' + type
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
-    return op_elem
+    ops_xml.append( op_elem )
+
+    return
 
 ###
-def Add_Fertilizer_Op( date, value, depth, type ):
+def Add_Fertilizer_Op( ops_xml, date, value, depth, type ):
     op_elem = Init_New_Op( date )
     action = ( 'Fertiliser apply ' +
         'amount = {} (kg/ha), depth = {} (mm), type = {} ()').format(
         str( value ), str( depth ), type )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
-    return op_elem
+    ops_xml.append( op_elem )
+
+    return
 
 ###
-def Add_Manure_Op( date, type, name, mass, cnr, cpr ):
+def Add_Manure_Op( ops_xml, date, type, name, mass, cnr, cpr ):
     op_elem = Init_New_Op( date )
     action = (
         'SurfaceOrganicMatter add_surfaceom ' +
@@ -43,58 +48,31 @@ def Add_Manure_Op( date, type, name, mass, cnr, cpr ):
         type, name, str( mass ), str( cnr ), str( cpr ) )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
-    return op_elem
+    ops_xml.append( op_elem )
+
+    return
 
 ###
-def Add_Planting_Op( date, crop, density, depth, cultivar, spacing ):
+def Add_Planting_Op( ops_xml, date, crop, density, depth, cultivar, spacing ):
     op_elem = Init_New_Op( date )
     action = ( '{} sow plants = {} (plants/m2), sowing_depth = {} (mm), ' +
         'cultivar = {}, row_spacing = {} (mm), crop_class = plant' ).format(
         crop, str( density ), str( depth ), cultivar, str( spacing ) )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
-    return op_elem
+    ops_xml.append( op_elem )
+
+    return
 
 ###
-def Add_Harvest_Op( date, crop ):
+def Add_Harvest_Op( ops_xml, date, crop ):
     op_elem = Init_New_Op( date )
     action = ( '{} end_crop' ).format( crop )
     act_elem = SubElement( op_elem, 'action' )
     act_elem.text = action
-    return op_elem
+    ops_xml.append( op_elem )
 
-
-""" cal_obj = [
-    {
-        'date': '1/4/2007',
-        'op_class': 'Tillage',
-        'type': 'disc',
-        'f_incorp': None,
-        'depth': None
-    },
-    {
-        'date': '13/4/2007',
-        'op_class': 'Tillage',
-        'type': 'user_defined',
-        'f_incorp': 0.0,
-        'depth': 50.0
-    },
-    {
-        'date': '13/4/2007',
-        'op_class': 'Fertilizer',
-        'type': 'urea_no3',
-        'depth': 10,
-        'amount': 25
-    },
-    {
-        'date': '15/4/2007',
-        'op_class': 'Planting',
-        'type': 'urea_no3',
-        'depth': 10,
-        'amount': 25
-    },
-] """
-
+    return
 
 ###
 def Add_Management_Oprns( calender ):
@@ -103,19 +81,15 @@ def Add_Management_Oprns( calender ):
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 
-    # for op in op_cal:
-    #     op_cal = SubElement( oprns, 'operation' )
-    #     op_cal.set( '')
-
     return man_xml
 
 #Add empty manager with bu/ac for corn/soy and the gradient for SWIM to work.
-def Add_Empty_Manager(bbc_potential=[200,100]):
+def Add_Empty_Manager( bbc_potential = [ 200, 100 ] ):
     """
     Creates an empty APSIM 'Manager' folder to hold bu/ac calculationg and
     SWIM bbc_potential = profile depth - tile/water table depth
     without the gradient set.
-    
+
     Returns:
         [xml] -- [XML for an empty manager]
     """
@@ -127,11 +101,11 @@ def Add_Empty_Manager(bbc_potential=[200,100]):
 
     gradient_script = SubElement( empty_man, 'script' )
     gradient_script_txt = SubElement( gradient_script, 'text' )
-    
+
     #!!!!IMPORTANT!!!!!
     #subsurface_drain and subsurface_drain_no3 won't work unless bbc_potential is se
     #!!!!!!!!!!!!!!!!!!
-    
+
     gradient_script_txt.text = """corn_buac   = maize.yield * 0.0159/0.85  ! corn yield in bushels/acre@15% moisture
 !soy_buac   = soybean.yield * 0.0149/0.87  !  soybean yield in bushels/acre
 
@@ -142,7 +116,7 @@ bbc_potential = {} - {}
 
     end_script = SubElement( empty_man, 'script' )
     end_script_text = SubElement( end_script, 'text' )
-    end_event = SubElement( end_script, 'event' ).text = 'end_of_day' 
+    end_event = SubElement( end_script, 'event' ).text = 'end_of_day'
 
     return empty_man
 #
