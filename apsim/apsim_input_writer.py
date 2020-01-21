@@ -27,8 +27,8 @@ START_DATE = '01/01/2016'
 END_DATE = '31/12/2018'
 
 ### constant spin up crops for multi-year rotation
-spin_up_corn = json.loads( open( 'maize.json', 'r' ).read() )
-spin_up_soybean = json.loads( open( 'soybean.json', 'r' ).read() )
+spin_up_corn = json.loads( open( 'crop_jsons/maize.json', 'r' ).read() )
+spin_up_soybean = json.loads( open( 'crop_jsons/soybean.json', 'r' ).read() )
 
 def Get_Date( date_str, year ):
     month_ids = {
@@ -105,7 +105,8 @@ for idx,task in input_tasks.iterrows():
     # generate .met files
     met_path = 'met_files/weather_{}.met'.format( fips )
     if not os.path.exists( 'apsim_files/' + met_path ):
-        clim.GetDaymetData( 'apsim_files/' + met_path, 1980, 2018, lat, lon )
+        print( 'test')
+        clim.GetDaymetData( 1980, 2018, lat, lon, 'apsim_files/' + met_path )
 
     # initialize .apsim xml
     apsim_xml = Element( 'folder' )
