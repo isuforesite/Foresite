@@ -6,11 +6,11 @@ from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 import json
 
-import apsim_wrap.soils as soils
-import apsim_wrap.wrapper as apsim
-import apsim_wrap.daymet as clim
-import apsim_wrap.database as db
-import apsim_wrap.op_manager as man
+import soils as soils
+import wrapper as apsim
+import daymet as clim
+import database as db
+import op_manager as man
 
 # Connect to database
 dbconn = db.ConnectToDB()
