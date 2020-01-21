@@ -27,41 +27,8 @@ START_DATE = '01/01/2016'
 END_DATE = '31/12/2018'
 
 ### constant spin up crops for multi-year rotation
-spin_up_corn = {
-    'implement': 'disc',
-    'depth': 178,
-    'residue_incorporation': 0.70,
-    'timing': '10-apr',
-    'kg_n_ha': 220,
-    'fertilize_n_on': '18-may',
-    'n_fertilizer': 'uan_n',
-    'sow_crop': 'maize',
-    'cultivar': 'B_105',
-    'planting_dates': '18-may',
-    'sowing_density': 8,
-    'sowing_depth': 51,
-    'row_spacing': 381,
-    'harvest': 'maize',
-    'harvest_date': '15-oct'
-}
-
-spin_up_soybean = {
-    'implement': 'disc',
-    'depth': 178,
-    'residue_incorporation': 0.70,
-    'timing': '25-apr',
-    'kg_n_ha': None,
-    'fertilize_n_on': None,
-    'n_fertilizer': None,
-    'sow_crop': 'soybean',
-    'cultivar': 'IA_2008_2.0',
-    'planting_dates': '18-may',
-    'sowing_density': 30,
-    'sowing_depth': 51,
-    'row_spacing': 381,
-    'harvest': 'maize',
-    'harvest_date': '1-oct'
-}
+spin_up_corn = json.loads( open( 'maize.json', 'r' ).read() )
+spin_up_soybean = json.loads( open( 'soybean.json', 'r' ).read() )
 
 def Get_Date( date_str, year ):
     month_ids = {
