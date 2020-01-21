@@ -4,9 +4,9 @@ import requests
 import pandas as pd
 import io
 
-daymet_endpt = 'https://daymet.ornl.gov/single-pixel/api/data'
+DAYMET_URL = 'https://daymet.ornl.gov/single-pixel/api/data'
 
-### Daymet variables
+### Daymet variables and units
 # day length (s/day)
 # min_temp (C)
 # max_temp (C)
@@ -15,8 +15,10 @@ daymet_endpt = 'https://daymet.ornl.gov/single-pixel/api/data'
 # snow-water equiv. (kg/m2)
 # vapor pressure (Pa)
 
-def GetDaymetData( filepath, startyr, endyr, lat, lon,
-    attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ] ):
+def GetDaymetData( startyr, endyr, lat, lon,
+    attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ],
+    filepath = None ):
+
     leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
 
     year_arr = [ str( startyr + i ) for i in range( endyr - startyr + 1 ) ]
@@ -26,7 +28,7 @@ def GetDaymetData( filepath, startyr, endyr, lat, lon,
         'vars': ','.join( attributes ),
         'years': ','.join( year_arr )
     }
-    req = requests.get( daymet_endpt, params = payload )
+    req = requests.get( DAYMET_URL, params = payload )
     df = pd.read_csv( io.StringIO( req.text ), sep = ',', header = 6 )
 
     df[ 'day' ] = df[ 'yday' ]
@@ -64,7 +66,7 @@ def GetDaymetData( filepath, startyr, endyr, lat, lon,
 
     df = df.sort_values( by = [ 'year', 'yday' ] )
 
-    #check if snow-water equivalent increases next day
+    # check if snow-water equivalent increases next day
     for idx, row in df.iterrows():
         if idx == 0:
             df.iloc[idx][ 'snow' ] = 0.0
@@ -95,11 +97,130 @@ def GetDaymetData( filepath, startyr, endyr, lat, lon,
     units = ' '.join( [ '()', '()', '(MJ/m^2)', '(oC)', '(oC)', '(mm)', '(mm)',
         '(kPa)', '(hours)' ] )
 
+    # dump met file with Windows line endings
+    if filepath:
+        metfile = open( filepath, 'w' )
+        metfile.write( '[weather.met.weather]\r\n' )
+        metfile.write( 'stateionname = Daymet weather\r\n')
+        metfile.write( 'latitude = {} (DECIMAL DEGREES)\r\n'.format( lat ) )
+        metfile.write( 'longitude = {} (DECIMAL DEGREES)\r\n'.format( lon ) )
+        metfile.write( 'tav = ' + str( round( df[ 'maxt' ].mean(), 1 ) ) + '\r\n' )
+        metfile.write( 'amp = ' + str( round( df[ 'maxt' ].max(), 1 ) ) + '\r\n' )
+        metfile.write( '!Weather generated using ISU Foresite framework\r\n')
+        metfile.write( headers + '\r\n' )
+        metfile.write( units + '\r\n' )
+        metfile.write( df.to_csv( sep = ' ', header = False, index = False,
+            line_terminator='\r\n' ) )
+        metfile.close()
+
+    return df
+
+def Create_Met_Files(
+    wth_df,
+    spinup_data ):
+    attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ]
+    leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
+
+    # get spinup data from Daymet
+    spup_start = spinup_data[ 'init_yr' ]
+    spup_end = spinup_data[ 'end_yr' ]
+    year_arr = [ str( spup_start + i ) for i in
+        range( spup_end - spup_start + 1 ) ]
+    payload = {
+        'lat': spinup_data[ 'lat' ],
+        'lon': spinup_data[ 'lon' ],
+        'vars': ','.join( attributes ),
+        'years': ','.join( year_arr )
+    }
+    req = requests.get( DAYMET_URL, params = payload )
+    spup_df = pd.read_csv( io.StringIO( req.text ), sep = ',', header = 6 )
+
+    # get weather sample id
+    wth_id = wth_df[ 'weather_sample_id' ].values[0]
+    print( wth_id )
+
+    # rename columns for merge with design weather
+    renames = {
+        'dayl (s)': 'dayl',
+        'prcp (mm/day)': 'prcp',
+        'srad (W/m^2)': 'srad',
+        'swe (kg/m^2)': 'swe',
+        'tmax (deg c)': 'tmax',
+        'tmin (deg c)': 'tmin',
+        'vp (Pa)': 'vp'
+    }
+    spup_df = spup_df.rename( columns = renames )
+
+    wth_df = wth_df.drop( columns = [ 'weather_sample_id', 'f1' ], axis = 1 )
+    wth_df = spup_df.append( wth_df, sort = False )
+
+    print( wth_df )
+
+    # create APSIM weather dataframe and dump to .met
+    df = pd.DataFrame()
+    df[ 'year' ] = wth_df[ 'year' ]
+    df[ 'day' ] = wth_df[ 'yday' ]
+    df[ 'dayL' ] = wth_df[ 'dayl' ]/3600
+    df[ 'radn' ] = wth_df[ 'srad' ] * wth_df[ 'dayl' ] / 3600 * 0.0036
+    df[ 'maxt' ] = wth_df[ 'tmax' ]
+    df[ 'mint' ] = wth_df[ 'tmin' ]
+    df[ 'prcp' ] = wth_df[ 'prcp' ]
+    df[ 'swe' ] = wth_df[ 'swe' ]
+    df[ 'vp' ] = wth_df[ 'vp' ] * 0.001
+    df[ 'rain' ] = 0.0
+    df[ 'snow' ] = 0.0
+
+    # clear original dataframe from memory
+    wth_df = None
+
+    # check for leap years
+    for lp_yr in leap_years:
+        lp_day = df.loc[ ( df[ 'year' ] == lp_yr ) &
+            ( df[ 'day' ] == 365 ) ].copy( deep = True )
+        lp_day[ 'day' ] = 366
+        lp_day[ 'yday' ] = 366
+
+        df = df.append( lp_day, ignore_index = True, sort = False )
+
+    df = df.sort_values( by = [ 'year', 'day' ] )
+
+    #check is snow-water equivalent increases next day
+    for idx, row in df.iterrows():
+        if idx == 0:
+            df.loc[ idx:idx, 'snow' ] = 0.0
+            df.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
+            continue
+        elif idx == len( df ) - 1:
+            df.loc[ idx:idx, 'snow' ] = 0.0
+            df.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
+            continue
+        else:
+            cur = row[ 'swe' ]
+            next = df.iloc[idx+1][ 'swe' ]
+            if next > cur:
+                df.loc[ idx:idx, 'snow' ] = row[ 'prcp' ]
+                df.loc[ idx:idx, 'rain' ] = 0.0
+            elif ( next > 0.0 ) & ( next == cur ):
+                df.loc[ idx:idx, 'snow' ] = row[ 'prcp' ]
+                df.loc[ idx:idx, 'rain' ] = 0.0
+            else:
+                df.loc[ idx:idx, 'snow' ] = 0.0
+                df.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
+
+    df = df.round( 2 )
+
+    df = df[ [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain', 'snow', 'vp','dayL' ] ]
+
+    headers = ' '.join( [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain', 'snow', 'vp', 'dayL' ] )
+    units = ' '.join( [ '()', '()', '(MJ/m^2)', '(oC)', '(oC)', '(mm)', '(mm)', '(kPa)', '(hours)' ] )
+
+    filepath = 'apsim_files/met_files/weather_sample_{}.met'.format( wth_id )
+
     metfile = open( filepath, 'w' )
     metfile.write( '[weather.met.weather]\r\n' )
     metfile.write( 'stateionname = Foresite generated weather\r\n')
-    metfile.write( 'latitude = {} (DECIMAL DEGREES)\r\n'.format( lat ) )
-    metfile.write( 'longitude = {} (DECIMAL DEGREES)\r\n'.format( lon ) )
+    metfile.write( ( 'latitude = {} (DECIMAL DEGREES)\r\n' ).format( spinup_data[ 'lat' ] ) )
+    metfile.write( ( 'longitude = {} (DECIMAL DEGREES)\r\n' ).format( spinup_data[ 'lon' ] ) )
     metfile.write( 'tav = ' + str( round( df[ 'maxt' ].mean(), 1 ) ) + '\r\n' )
     metfile.write( 'amp = ' + str( round( df[ 'maxt' ].max(), 1 ) ) + '\r\n' )
     metfile.write( '!Weather generated using ISU Foresite framework\r\n')
@@ -110,71 +231,3 @@ def GetDaymetData( filepath, startyr, endyr, lat, lon,
     metfile.close()
 
     return df
-
-def Create_Met_Files( wth_df ):
-    wth_sample_ids = wth_df[ 'weather_sample_id' ].unique()
-    for wth_id in wth_sample_ids:
-        file_path = 'wth_sample_{}.met'.format( wth_id )
-        df = pd.DataFrame()
-        df[ 'day' ] = wth_df[ 'yday' ]
-        df[ 'dayL' ] = wth_df[ 'dayl' ]/3600
-        df[ 'radn' ] = wth_df[ 'srad' ] * wth_df[ 'dayl' ] / 3600 * 0.0036
-        df[ 'maxt' ] = wth_df[ 'tmax' ]
-        df[ 'mint' ] = wth_df[ 'tmin' ]
-        df[ 'prcp' ] = wth_df[ 'prcp' ]
-        df[ 'swe' ] = wth_df[ 'swe' ]
-        df[ 'vp' ] = wth_df[ 'vp' ] * 0.001
-        df[ 'rain' ] = 0.0
-        df[ 'snow' ] = 0.0
-        df[ 'weather_id' ] = wth_id
-        df[ 'year' ] = 2019
-
-        #check is snow-water equivalent increases next day
-        for idx, row in df.iterrows():
-            if idx == 0:
-                df.loc[ idx:idx, 'snow' ] = 0.0
-                df.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
-                continue
-            elif idx == len( df ) - 1:
-                df.loc[ idx:idx, 'snow' ] = 0.0
-                df.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
-                continue
-            else:
-                cur = row[ 'swe' ]
-                next = df.iloc[idx+1][ 'swe' ]
-                if next > cur:
-                    df.loc[ idx:idx, 'snow' ] = row[ 'prcp' ]
-                    df.loc[ idx:idx, 'rain' ] = 0.0
-                elif ( next > 0.0 ) & ( next == cur ):
-                    df.loc[ idx:idx, 'snow' ] = row[ 'prcp' ]
-                    df.loc[ idx:idx, 'rain' ] = 0.0
-                else:
-                    df.loc[ idx:idx, 'snow' ] = 0.0
-                    df.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
-
-        df = df.round( 2 )
-
-        df = df[ [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain', 'snow', 'vp','dayL' ] ]
-
-        file_path = 'apsim_files/met_files/weather_{}.met'.format( wth_id )
-        headers = ' '.join( [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain', 'snow', 'vp', 'dayL' ] )
-        units = ' '.join( [ '()', '()', '(MJ/m^2)', '(oC)', '(oC)', '(mm)', '(mm)', '(kPa)', '(hours)' ] )
-
-        metfile = open( file_path, 'w' )
-        metfile.write( '[weather.met.weather]\n' )
-        metfile.write( 'stateionname = Foresite generated weather\n')
-        metfile.write( 'latitude = 42.0204 (DECIMAL DEGREES)\n' )
-        metfile.write( 'longitude = -93.7738 (DECIMAL DEGREES)\n' )
-        metfile.write( 'tav = ' + str( df[ 'maxt' ].mean() ) + '\n' )
-        metfile.write( 'amp = ' + str( df[ 'maxt' ].max() ) + '\n' )
-        metfile.write( '!Weather generated using ISU Foresite framework\n')
-        metfile.write( headers + '\n' )
-        metfile.write( units + '\n' )
-        metfile.write( df.to_csv( sep = ' ', header = False, index = False ) )
-        metfile.close()
-
-
-    return
-
-### example
-#GetDaymetDataBuffer( 'IA169', 1980, 2018, 42.0362414914617, -93.4650447653806 )
