@@ -4,11 +4,13 @@ import os
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
-import soils
-import wrapper as apsim
-import daymet as clim
-import database as db
-import op_manager as ops
+import json
+
+import apsim_wrap.soils as soils
+import apsim_wrap.wrapper as apsim
+import apsim_wrap.daymet as clim
+import apsim_wrap.database as db
+import apsim_wrap.op_manager as man
 
 # Connect to database
 dbconn = db.ConnectToDB()
@@ -19,13 +21,88 @@ EMULATOR_wth_table = 'test20.design_weather'
 
 # query scenarios to generate inputs
 INPUT_QUERY = 'select * from test20.test20_inputs limit 5'
-
 input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
+
 print( input_tasks )
 
 SIM_NAME = 'emulator_test_inputs'
-START_DATE = '01/01/2019'
+START_DATE = '01/01/2017'
 END_DATE = '31/12/2019'
+
+# get spin up data
+fips = 'IA169'
+querystr = '''
+    select
+		st_x( st_centroid( wkb_geometry ) ) as lon,
+		st_y( st_centroid( wkb_geometry ) ) as lat
+    from public.us_county
+    where
+		fips = \'{}\';'''.format( fips )
+coords = pd.read_sql( querystr, dbconn  )
+spinup_lat = coords[ 'lat' ].values[0]
+spinup_lon = coords[ 'lon' ].values[0]
+
+spinup_data = {
+    'lat': spinup_lat,
+    'lon': spinup_lon,
+    'init_yr': 2017,
+    'end_yr': 2018
+}
+
+### constant spin up crops for multi-year rotation
+spin_up_corn = json.loads( open( 'crop_jsons/maize.json', 'r' ).read() )
+spin_up_soybean = json.loads( open( 'crop_jsons/soybean.json', 'r' ).read() )
+
+def Get_Date( date_str, year ):
+    month_ids = {
+        'jan': 1, 'feb': 2, 'mar': 3,
+        'apr': 4, 'may': 5, 'jun': 6,
+        'jul': 7, 'aug': 8, 'sep': 9,
+        'oct': 10, 'nov': 11, 'dec': 12
+    }
+    date = [ date_str.split( '-' )[0],
+        month_ids[ date_str.split( '-' )[1] ],
+        year ]
+    date = '/'.join( [ str( d ) for d in date ] )
+
+    return date
+
+def Add_Management_Year( oprns, task, year ):
+    ### tillage specs
+    till_imp = task[ 'implement' ]
+    till_depth = task[ 'depth' ]
+    till_incorp = task[ 'residue_incorporation' ]
+    till_date = Get_Date( task[ 'timing' ], year )
+    man.Add_Till_Op( oprns, till_date, 'user_defined', till_incorp,
+        till_depth )
+
+    ### fert specs
+    n_rate = task[ 'kg_n_ha' ]
+    n_type = task[ 'n_fertilizer' ]
+    n_depth = 0.0
+    if n_rate != None and float( n_rate ) > 0.0:
+        n_date = Get_Date( task[ 'fertilize_n_on' ], year )
+        man.Add_Fertilizer_Op( oprns, n_date, n_rate, n_depth, n_type )
+
+    ### planting specs
+    crop = task[ 'sow_crop' ]
+    cult = task[ 'cultivar' ]
+    dens = task[ 'sowing_density' ]
+    depth = task[ 'sowing_depth' ]
+    space = task[ 'row_spacing' ]
+
+    plant_date = Get_Date( task[ 'planting_dates' ], year )
+    man.Add_Planting_Op( oprns, plant_date, crop, dens, depth, cult, space )
+
+    harvest_crop = task[ 'harvest' ]
+    if crop == 'maize':
+        harvest_date = str ( '15-oct' )
+    elif crop == 'soybean':
+        harvest_date = str ( '1-oct' )
+    harvest_date = Get_Date( harvest_date, year )
+    man.Add_Harvest_Op( oprns, harvest_date, harvest_crop )
+
+    return
 
 # create directories for dumping .apsim and .met files
 if not os.path.exists('apsim_files'):
@@ -33,21 +110,26 @@ if not os.path.exists('apsim_files'):
 if not os.path.exists('apsim_files/met_files'):
     os.makedirs('apsim_files/met_files')
 
+# get all weather data
+wth_query = '''select * from test20.design_weather'''
+wth_df = pd.read_sql( wth_query, dbconn )
+wth_df[ 'year' ] = 2019
+
 # loop of tasks
 for idx,task in input_tasks.iterrows():
     uuid = str( task[ 'uuid' ] )
     soil_id = task[ 'soil_sample_id' ]
-    wth_id = task[ 'weather_sample_id' ]
+    wth_id = int( task[ 'weather_sample_id' ] )
 
     # get soils data
     soil_query = '''select * from public.soil_samples
         where soil_sample_id::int4 = {}'''.format( soil_id )
     soil_df = pd.read_sql( soil_query, dbconn )
+
     # correct depth
     design_lyrs = [ 0, 20, 40, 60, 80, 100, 150, 200 ]
     bttms = [ x for x in design_lyrs ][1:]
     tops = [ x for x in design_lyrs ][:-1]
-    print( soil_df )
 
     for idx,lyr in enumerate( design_lyrs[1:] ):
         soil_df.loc[ ( soil_df[ 'layer' ] == lyr ), 'hzdept_r' ] = tops[ idx ]
@@ -56,14 +138,12 @@ for idx,task in input_tasks.iterrows():
     if soil_df.empty:
         continue
 
-    # generate .met files
-    wth_query = '''select * from test20.design_weather
-        where weather_sample_id::int4 = {}'''.format( wth_id )
-    wth_df = pd.read_sql( wth_query, dbconn )
-    clim.Create_Met_Files( wth_df )
+    # get weather data based on id
+    wth_df_ds = wth_df.loc[ wth_df[ 'weather_sample_id' ] == wth_id ]
+    clim.Create_Met_Files( wth_df_ds, spinup_data )
 
     # initialize .apsim xml
-    met_path = 'met_files/weather_{}.met'.format( wth_id )
+    met_path = 'met_files/weather_sample_{}.met'.format( wth_id )
     apsim_xml = Element( 'folder' )
     apsim_xml.set( 'version', '36' )
     apsim_xml.set( 'creator', 'Apsim_Wrapper' )
@@ -90,7 +170,9 @@ for idx,task in input_tasks.iterrows():
     area.set( 'name', 'paddock' )
 
     # add soil xml
-    soil_xml = soils.Create_Soil_XML( uuid, soil_df, Run_SWIM = True,
+    soil_xml = soils.Create_Soil_XML(
+        soil_df,
+        Run_SWIM = True,
         SaxtonRawls = True )
     area.append( soil_xml )
 
@@ -103,6 +185,8 @@ for idx,task in input_tasks.iterrows():
 
     ### crops
     crop_xml = SubElement( area, 'maize' )
+    crop_xml = SubElement( area, 'soybean' )
+    crop_xml = SubElement( area, 'wheat' )
 
     ### output file
     outvars = [
@@ -144,67 +228,18 @@ for idx,task in input_tasks.iterrows():
     output_xml.append( apsim.Add_XY_Graph( 'Date', graph_no3, 'no3' ) )
     output_xml.append( apsim.Add_XY_Graph( 'Date', graph_yield, 'yield' ) )
     output_xml.append( apsim.Add_XY_Graph( 'Date', graph_all, 'all outputs' ) )
-    
-    month_ids = {
-        'jan': 1,
-        'feb': 2,
-        'mar': 3,
-        'apr': 4,
-        'may': 5,
-        'jun': 6,
-        'jul': 7,
-        'aug': 8,
-        'sep': 9,
-        'oct': 10,
-        'nov': 11,
-        'dec': 12
-    }
 
     man_xml = Element( 'folder' )
     man_xml.set( 'name', 'Manager folder' )
-    man_xml.append(ops.Add_Empty_Manager())
+
+    man_xml.append( man.Add_Empty_Manager() )
+
     oprns = SubElement( man_xml, 'operations' )
     oprns.set( 'name', 'Operations Schedule' )
 
-    spec_yr = 2019
-    get_date = lambda d : ( [ d.split( '-' )[0], month_ids[ d.split( '-' )[1] ],
-        spec_yr ] )
-
-    ### tillage specs
-    till_imp = task[ 'implement' ]
-    till_depth = task[ 'depth' ]
-    till_incorp = task[ 'residue_incorporation' ]
-    till_date = get_date( task[ 'timing' ] )
-    till_date = '/'.join( [ str( date ) for date in till_date ] )
-    oprns.append(
-        ops.Add_Till_Op( till_date, 'user_defined', till_incorp, till_depth ) )
-
-    ### fert specs
-    n_rate = task[ 'kg_n_ha' ]
-    n_type = task[ 'n_fertilizer' ]
-    n_depth = 0.0
-    n_date = get_date( task[ 'fertilize_n_on' ] )
-    n_date = '/'.join( [ str( date ) for date in n_date ] )
-    oprns.append( ops.Add_Fertilizer_Op( n_date, n_rate, n_depth, n_type ) )
-
-    ### planting specs
-    crop = task[ 'sow_crop' ]
-    cult = task[ 'cultivar' ]
-    dens = task[ 'sowing_density' ]
-    depth = task[ 'sowing_depth' ]
-    space = task[ 'row_spacing' ]
-    harvest = task[ 'harvest' ]
-    plant_date = get_date( task[ 'planting_dates' ] )
-    plant_date = '/'.join( [ str( date ) for date in plant_date ] )
-    oprns.append(
-        ops.Add_Planting_Op( plant_date, crop, dens, depth, cult, space ) )
-
-    harvest_crop = task[ 'harvest' ]
-    if crop == 'maize':
-        harvest_date = str ( '15/10/2018' )
-    elif crop == 'soybean':
-        harvest_date = str ( '01/10/2018' )
-    oprns.append(ops.Add_Harvest_Op(harvest_date, harvest_crop))
+    Add_Management_Year( oprns, spin_up_corn, 2017 )
+    Add_Management_Year( oprns, spin_up_soybean, 2018 )
+    Add_Management_Year( oprns, task, 2019 )
 
     area.append( man_xml )
 
