@@ -3,11 +3,6 @@
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
-import soils
-import database
-import op_manager
-import daymet
-
 ###
 def Set_Output_Variables( out_file, var_list ):
     output_xml = Element( 'outputfile' )
