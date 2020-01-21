@@ -15,13 +15,11 @@ DAYMET_URL = 'https://daymet.ornl.gov/single-pixel/api/data'
 # snow-water equiv. (kg/m2)
 # vapor pressure (Pa)
 
-def GetDaymetData( startyr, endyr, lat, lon,
-    attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ],
-    filepath = None ):
-
+def GetDaymetData( startyr, endyr, lat, lon, filepath = None ):
+    attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ]
     leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
-
     year_arr = [ str( startyr + i ) for i in range( endyr - startyr + 1 ) ]
+
     payload = {
         'lat': str( lat ),
         'lon': str( lon ),
@@ -31,24 +29,25 @@ def GetDaymetData( startyr, endyr, lat, lon,
     req = requests.get( DAYMET_URL, params = payload )
     df = pd.read_csv( io.StringIO( req.text ), sep = ',', header = 6 )
 
+    # day of year
     df[ 'day' ] = df[ 'yday' ]
 
-    #daylength (hours)
+    # daylength (hours)
     df[ 'dayL' ] = round( df[ 'dayl (s)' ]/3600, 1 )
 
-    #solar radiation (MJ/m2)
+    # solar radiation (MJ/m2)
     df[ 'radn' ] = round( df[ 'srad (W/m^2)' ] * df[ 'dayl (s)' ] / 3600 * 0.0036, 1 )
 
-    #max temperature (deg C)
+    # max temperature (deg C)
     df[ 'maxt' ] = round( df[ 'tmax (deg c)' ], 1 )
 
-    #min temperature (deg C)
+    # min temperature (deg C)
     df[ 'mint' ] = round( df[ 'tmin (deg c)' ], 1 )
 
-    #vapor pressure (kPa)
+    # vapor pressure (kPa)
     df[ 'vp' ] = round( df[ 'vp (Pa)' ] * 0.001, 1 )
 
-    #snow and rain (mm)
+    # snow and rain (mm)
     df[ 'rain' ] = 0.0
     df[ 'snow' ] = 0.0
 
@@ -184,7 +183,7 @@ def Create_Met_Files(
 
     df = df.sort_values( by = [ 'year', 'day' ] )
 
-    #check is snow-water equivalent increases next day
+    # check is snow-water equivalent increases next day
     for idx, row in df.iterrows():
         if idx == 0:
             df.loc[ idx:idx, 'snow' ] = 0.0
