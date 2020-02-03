@@ -7,30 +7,24 @@ import pandas as pd
 import io
 import json
 
-import soils
-import wrapper as apsim
-import daymet as clim
-import database as db
-import op_manager as ops
+import apsim.wrapper as apsim
 
 # Connect to database
-dbconn = db.ConnectToDB()
+dbconn = apsim.connect_to_database( 'database.ini' )
 
 # query scenarios to generate inputs
-INPUT_QUERY = 'select * from sandbox.huc12_inputs limit 5'
-input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
-
-print( input_tasks )
-
 SIM_NAME = 'huc12_test_job'
 START_DATE = '01/01/2016'
 END_DATE = '31/12/2018'
+INPUT_QUERY = 'select * from sandbox.huc12_inputs limit 5'
+input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 
-### constant spin up crops for multi-year rotation
+# constant spin up crops for multi-year rotation
 spin_up_corn = json.loads( open( 'crop_jsons/maize.json', 'r' ).read() )
 spin_up_soybean = json.loads( open( 'crop_jsons/soybean.json', 'r' ).read() )
 
-def Get_Date( date_str, year ):
+###
+def get_date( date_str, year ):
     month_ids = {
         'jan': 1, 'feb': 2, 'mar': 3,
         'apr': 4, 'may': 5, 'jun': 6,
@@ -44,22 +38,22 @@ def Get_Date( date_str, year ):
 
     return date
 
-def Add_Management_Year( oprns, task, year ):
+###
+def add_management_year( man_ops, task, year ):
     ### tillage specs
     till_imp = task[ 'implement' ]
     till_depth = task[ 'depth' ]
     till_incorp = task[ 'residue_incorporation' ]
-    till_date = Get_Date( task[ 'timing' ], year )
-    ops.Add_Till_Op( oprns, till_date, 'user_defined', till_incorp,
-        till_depth )
+    till_date = get_date( task[ 'timing' ], year )
+    man_ops.add_till_op( till_date, 'user_defined', till_incorp, till_depth )
 
     ### fert specs
     n_rate = task[ 'kg_n_ha' ]
     n_type = task[ 'n_fertilizer' ]
     n_depth = 0.0
     if n_rate != None and n_rate > 0.0:
-        n_date = Get_Date( task[ 'fertilize_n_on' ], year )
-        ops.Add_Fertilizer_Op( oprns, n_date, n_rate, n_depth, n_type )
+        n_date = get_date( task[ 'fertilize_n_on' ], year )
+        man_ops.add_fert_op( n_date, n_rate, n_depth, n_type )
 
     ### planting specs
     crop = task[ 'sow_crop' ]
@@ -68,19 +62,20 @@ def Add_Management_Year( oprns, task, year ):
     depth = task[ 'sowing_depth' ]
     space = task[ 'row_spacing' ]
 
-    plant_date = Get_Date( task[ 'planting_dates' ], year )
-    ops.Add_Planting_Op( oprns, plant_date, crop, dens, depth, cult, space )
+    plant_date = get_date( task[ 'planting_dates' ], year )
+    man_ops.add_plant_op( plant_date, crop, dens, depth, cult, space )
 
     harvest_crop = task[ 'harvest' ]
     if crop == 'maize':
         harvest_date = str ( '15-oct' )
     elif crop == 'soybean':
         harvest_date = str ( '1-oct' )
-    harvest_date = Get_Date( harvest_date, year )
-    ops.Add_Harvest_Op( oprns, harvest_date, harvest_crop )
+    harvest_date = get_date( harvest_date, year )
+    man_ops.add_harvest_op( harvest_date, harvest_crop )
 
     return
 
+################################################################################
 # create directories for dumping .apsim and .met files
 if not os.path.exists( 'apsim_files' ):
     os.makedirs( 'apsim_files' )
@@ -105,8 +100,8 @@ for idx,task in input_tasks.iterrows():
     # generate .met files
     met_path = 'met_files/weather_{}.met'.format( fips )
     if not os.path.exists( 'apsim_files/' + met_path ):
-        print( 'test')
-        clim.GetDaymetData( 1980, 2018, lat, lon, 'apsim_files/' + met_path )
+        wth_obj = apsim.Weather().from_daymet( lat, lon, 1980, 2018 )
+        wth_obj.write_met_file( 'apsim_files/{}'.format( met_path ) )
 
     # initialize .apsim xml
     apsim_xml = Element( 'folder' )
@@ -137,14 +132,15 @@ for idx,task in input_tasks.iterrows():
     area.set( 'name', 'paddock' )
 
     # add soil xml
-    soil_xml = soils.Create_Soil_XML(
+    soil = apsim.Soil(
         soil_df,
-        Run_SWIM = True,
+        SWIM = False,
         SaxtonRawls = True )
-    area.append( soil_xml )
+
+    area.append( soil.soil_xml() )
 
     ### surface om
-    surfom_xml = apsim.Init_SurfaceOM( 'maize', 'maize', 3500, 65, 0.0 )
+    surfom_xml = apsim.init_surfaceOM( 'maize', 'maize', 3500, 65, 0.0 )
     area.append( surfom_xml )
 
     ### fertilizer
@@ -162,7 +158,7 @@ for idx,task in input_tasks.iterrows():
         'surfaceom_c', 'subsurface_drain',
         'subsurface_drain_no3', 'leach_no3',
         'corn_buac', 'soy_buac' ]
-    output_xml = apsim.Set_Output_Variables( uuid + '.out', outvars )
+    output_xml = apsim.set_output_variables( uuid + '.out', outvars )
     area.append( output_xml )
 
     graph_no3 = [
@@ -183,24 +179,18 @@ for idx,task in input_tasks.iterrows():
         'soy_buac'
     ]
 
-    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_no3, 'no3' ) )
-    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_yield, 'yield' ) )
-    output_xml.append( apsim.Add_XY_Graph( 'Date', graph_all, 'all outputs' ) )
+    output_xml.append( apsim.add_xy_graph( 'Date', graph_no3, 'no3' ) )
+    output_xml.append( apsim.add_xy_graph( 'Date', graph_yield, 'yield' ) )
+    output_xml.append( apsim.add_xy_graph( 'Date', graph_all, 'all outputs' ) )
 
-    #Manager and operations folder
-    man_xml = Element( 'folder' )
-    man_xml.set( 'name', 'Manager folder' )
+    op_man = apsim.OpManager()
+    op_man.add_empty_manager()
 
-    man_xml.append( ops.Add_Empty_Manager() )
+    add_management_year( op_man, spin_up_corn, 2016 )
+    add_management_year( op_man, spin_up_soybean, 2017 )
+    add_management_year( op_man, task, 2018 )
 
-    oprns = SubElement( man_xml, 'operations' )
-    oprns.set( 'name', 'Operations Schedule' )
-
-    Add_Management_Year( oprns, spin_up_corn, 2016 )
-    Add_Management_Year( oprns, spin_up_soybean, 2017 )
-    Add_Management_Year( oprns, task, 2018 )
-
-    area.append( man_xml )
+    area.append( op_man.man_xml )
 
     outfile = 'apsim_files/{}.apsim'.format( uuid )
     ### management data
