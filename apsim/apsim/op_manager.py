@@ -35,7 +35,7 @@ class OpManager:
         self.ops_xml.append( op_elem )
 
     ###
-    def add_fertilizer_op( self, date, value, depth, type ):
+    def add_fert_op( self, date, value, depth, type ):
         op_elem = init_new_op( date )
         action = ( 'Fertiliser apply ' +
             'amount = {} (kg/ha), depth = {} (mm), type = {} ()').format(
@@ -56,7 +56,7 @@ class OpManager:
         self.ops_xml.append( op_elem )
 
     ###
-    def add_planting_op( self, date, crop, density, depth, cultivar, spacing ):
+    def add_plant_op( self, date, crop, density, depth, cultivar, spacing ):
         op_elem = init_new_op( date )
         action = ( '{} sow plants = {} (plants/m2), sowing_depth = {} (mm), ' +
             'cultivar = {}, row_spacing = {} (mm), crop_class = plant' ).format(
