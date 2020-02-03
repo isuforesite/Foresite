@@ -11,15 +11,68 @@ DAYMET_URL = 'https://daymet.ornl.gov/single-pixel/api/data'
 class Weather:
 
     ###
-    def from_database( self, db_conn, query ):
-        if wth_df.empty:
-            self.data = pd.read_sql( query, dbconn )
+    def from_dataframe( self, wth_df ):
+        #check keys
+        keys = [ 'year', 'yday', 'prcp', 'srad', 'swe', 'tmax', 'tmin', 'vp' ]
+        leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
+        for key in keys:
+            if key not in wth_df.columns:
+                print( 'Imported weather data missing key "%"'.format( key ) )
 
-            #check keys
-            keys = [ 'year', 'yday', 'prcp', 'srad', 'swe', 'tmax', 'tmin', 'vp' ]
-            for key in keys:
-                if key not in self.data.keys:
-                    print( 'Imported weather data missing key "%"'.format( key ) )
+        wth_df = wth_df.drop( columns = [ 'f1' ], axis = 1 )
+
+        self.init_yr = wth_df[ 'year' ].min()
+        self.end_yr = wth_df[ 'year' ].max()
+
+        self.data = pd.DataFrame()
+        self.data[ 'year' ] = wth_df[ 'year' ]
+        self.data[ 'day' ] = wth_df[ 'yday' ]
+        self.data[ 'dayL' ] = wth_df[ 'dayl' ]/3600
+        self.data[ 'radn' ] = wth_df[ 'srad' ] * wth_df[ 'dayl' ] / 3600 * 0.0036
+        self.data[ 'maxt' ] = wth_df[ 'tmax' ]
+        self.data[ 'mint' ] = wth_df[ 'tmin' ]
+        self.data[ 'prcp' ] = wth_df[ 'prcp' ]
+        self.data[ 'swe' ] = wth_df[ 'swe' ]
+        self.data[ 'vp' ] = wth_df[ 'vp' ] * 0.001
+        self.data[ 'rain' ] = 0.0
+        self.data[ 'snow' ] = 0.0
+
+        # check for leap years
+        for lp_yr in leap_years:
+            lp_day = self.data.loc[ ( self.data[ 'year' ] == lp_yr ) &
+                ( self.data[ 'day' ] == 365 ) ].copy( deep = True )
+            lp_day[ 'day' ] = 366
+            lp_day[ 'yday' ] = 366
+
+            self.data = self.data.append( lp_day, ignore_index = True, sort = False )
+
+        self.data = self.data.sort_values( by = [ 'year', 'day' ] )
+
+        # check is snow-water equivalent increases next day
+        for idx, row in self.data.iterrows():
+            if idx == 0:
+                self.data.loc[ idx:idx, 'snow' ] = 0.0
+                self.data.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
+                continue
+            elif idx == len( self.data ) - 1:
+                self.data.loc[ idx:idx, 'snow' ] = 0.0
+                self.data.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
+                continue
+            else:
+                cur = row[ 'swe' ]
+                next = self.data.iloc[idx+1][ 'swe' ]
+                if next > cur:
+                    self.data.loc[ idx:idx, 'snow' ] = row[ 'prcp' ]
+                    self.data.loc[ idx:idx, 'rain' ] = 0.0
+                elif ( next > 0.0 ) & ( next == cur ):
+                    self.data.loc[ idx:idx, 'snow' ] = row[ 'prcp' ]
+                    self.data.loc[ idx:idx, 'rain' ] = 0.0
+                else:
+                    self.data.loc[ idx:idx, 'snow' ] = 0.0
+                    self.data.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
+
+        self.data = self.data[[ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
+            'snow', 'vp', 'dayL' ]]
 
         return self
 
@@ -124,6 +177,13 @@ class Weather:
     ###
     def write_met_file( self, filepath ):
         # dump met file with Windows line endings
+        if self.lat == None:
+            lat = ''
+            lon = ''
+        else:
+            lat = self.lat
+            lon = self.lon
+
         if filepath:
             headers = ' '.join( [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
                 'snow', 'vp', 'dayL' ] )
@@ -134,9 +194,9 @@ class Weather:
             metfile.write( '[weather.met.weather]\r\n' )
             metfile.write( 'stateionname = Daymet weather\r\n')
             metfile.write( 'latitude = {} (DECIMAL DEGREES)\r\n'.format(
-                self.lat ) )
+                lat ) )
             metfile.write( 'longitude = {} (DECIMAL DEGREES)\r\n'.format(
-                self.lon ) )
+                lon ) )
             metfile.write( 'tav = ' +
                 str( round( self.data[ 'maxt' ].mean(), 1 ) ) + '\r\n' )
             metfile.write( 'amp = ' +
@@ -148,60 +208,40 @@ class Weather:
                 index = False, line_terminator='\r\n' ) )
             metfile.close()
 
-    def add_daymet_spinup( self, spinup_data ):
+    def add_daymet_spinup( self, lat, lon, init_yr, end_yr ):
+        self.lat = lat
+        self.lon = lon
+        self.init_yr = init_yr
 
-        attributes = [ 'dayl','prcp', 'srad','swe', 'tmax','tmin','vp' ]
+        attributes = [ 'weather_sample_id', 'dayl','prcp', 'srad','swe',
+            'tmax','tmin','vp' ]
         leap_years = [ yr for yr in range( 1980, 2020, 4 ) ]
 
         # get spinup data from Daymet
-        spup_start = spinup_data[ 'init_yr' ]
-        spup_end = spinup_data[ 'end_yr' ]
-        year_arr = [ str( spup_start + i ) for i in
-            range( spup_end - spup_start + 1 ) ]
+        spup_start = init_yr
+        spup_end = end_yr
+        year_arr = [ str( init_yr + i ) for i in range( end_yr - init_yr + 1 ) ]
         payload = {
-            'lat': spinup_data[ 'lat' ],
-            'lon': spinup_data[ 'lon' ],
+            'lat': lat,
+            'lon': lon,
             'vars': ','.join( attributes ),
             'years': ','.join( year_arr )
         }
         req = requests.get( DAYMET_URL, params = payload )
-        spup_df = pd.read_csv( io.StringIO( req.text ), sep = ',', header = 6 )
+        spinup_df = pd.read_csv( io.StringIO( req.text ), sep = ',', header = 6 )
 
-        # get weather sample id
-        wth_id = wth_df[ 'weather_sample_id' ].values[0]
-        print( wth_id )
-
-        # rename columns for merge with design weather
-        renames = {
-            'dayl (s)': 'dayl',
-            'prcp (mm/day)': 'prcp',
-            'srad (W/m^2)': 'srad',
-            'swe (kg/m^2)': 'swe',
-            'tmax (deg c)': 'tmax',
-            'tmin (deg c)': 'tmin',
-            'vp (Pa)': 'vp'
-        }
-        spup_df = spup_df.rename( columns = renames )
-
-        wth_df = wth_df.drop( columns = [ 'weather_sample_id', 'f1' ], axis = 1 )
-        wth_df = spup_df.append( wth_df, sort = False )
-
-        # create APSIM weather dataframe and dump to .met
         wth_df = pd.DataFrame()
-        wth_df[ 'year' ] = wth_df[ 'year' ]
-        wth_df[ 'day' ] = wth_df[ 'yday' ]
-        wth_df[ 'dayL' ] = wth_df[ 'dayl' ]/3600
-        wth_df[ 'radn' ] = wth_df[ 'srad' ] * wth_df[ 'dayl' ] / 3600 * 0.0036
-        wth_df[ 'maxt' ] = wth_df[ 'tmax' ]
-        wth_df[ 'mint' ] = wth_df[ 'tmin' ]
-        wth_df[ 'prcp' ] = wth_df[ 'prcp' ]
-        wth_df[ 'swe' ] = wth_df[ 'swe' ]
-        wth_df[ 'vp' ] = wth_df[ 'vp' ] * 0.001
+        wth_df[ 'year' ] = spinup_df[ 'year' ]
+        wth_df[ 'day' ] = spinup_df[ 'yday' ]
+        wth_df[ 'dayL' ] = spinup_df[ 'dayl (s)' ]/3600
+        wth_df[ 'radn' ] = spinup_df[ 'srad (W/m^2)' ] * spinup_df[ 'dayl (s)' ] / 3600 * 0.0036
+        wth_df[ 'maxt' ] = spinup_df[ 'tmax (deg c)' ]
+        wth_df[ 'mint' ] = spinup_df[ 'tmin (deg c)' ]
+        wth_df[ 'prcp' ] = spinup_df[ 'prcp (mm/day)' ]
+        wth_df[ 'swe' ] = spinup_df[ 'swe (kg/m^2)' ]
+        wth_df[ 'vp' ] = spinup_df[ 'vp (Pa)' ] * 0.001
         wth_df[ 'rain' ] = 0.0
         wth_df[ 'snow' ] = 0.0
-
-        # clear original dataframe from memory
-        wth_df = None
 
         # check for leap years
         for lp_yr in leap_years:
@@ -237,9 +277,8 @@ class Weather:
                     wth_df.loc[ idx:idx, 'snow' ] = 0.0
                     wth_df.loc[ idx:idx, 'rain' ] = row[ 'prcp' ]
 
-        wth_df = wth_df.round( 2 )
+        wth_df = wth_df[[ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
+            'snow', 'vp', 'dayL' ]]
 
-        wth_df = wth_df[ [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
-            'snow', 'vp','dayL' ] ]
-
-        self.data = wth_df
+        self.data = wth_df.append( self.data, sort = False )
+        self.data = self.data.round( 2 )
