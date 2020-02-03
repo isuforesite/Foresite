@@ -4,7 +4,7 @@ from apsim.config import config
 from sqlalchemy import create_engine
 
 #create a new database connection
-def ConnectToDB( filepath ):
+def connect_to_db( filepath ):
     #import db info from config file
     params = config( filepath )
     #create new connection from config info

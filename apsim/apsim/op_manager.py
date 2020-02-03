@@ -4,7 +4,7 @@ import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
 ###
-def Init_New_Op( date ):
+def init_new_op( date ):
     op_elem = Element( 'operation' )
     op_elem.set( 'condition', 'start_of_day' )
     date_elem = SubElement( op_elem, 'date' )
@@ -22,8 +22,8 @@ class OpManager:
         self.ops_xml.set( 'name', 'Operations Schedule' )
 
     ###
-    def Add_Till_Op( self, date, type, f_incorp = None, tillage_depth = None ):
-        op_elem = Init_New_Op( date )
+    def add_till_op( self, date, type, f_incorp = None, tillage_depth = None ):
+        op_elem = init_new_op( date )
         if type == 'user_defined':
             action = ( 'SurfaceOrganicMatter tillage type = user_defined, ' +
                 'f_incorp = {} (0-1), tillage_depth = {} (mm)' ).format(
@@ -35,8 +35,8 @@ class OpManager:
         self.ops_xml.append( op_elem )
 
     ###
-    def Add_Fertilizer_Op( self, date, value, depth, type ):
-        op_elem = Init_New_Op( date )
+    def add_fertilizer_op( self, date, value, depth, type ):
+        op_elem = init_new_op( date )
         action = ( 'Fertiliser apply ' +
             'amount = {} (kg/ha), depth = {} (mm), type = {} ()').format(
             str( value ), str( depth ), type )
@@ -45,8 +45,8 @@ class OpManager:
         self.ops_xml.append( op_elem )
 
     ###
-    def Add_Manure_Op( self, date, type, name, mass, cnr, cpr ):
-        op_elem = Init_New_Op( date )
+    def add_manure_op( self, date, type, name, mass, cnr, cpr ):
+        op_elem = init_new_op( date )
         action = (
             'SurfaceOrganicMatter add_surfaceom ' +
             'type = {}, name = {}, mass = {} (kg/ha), cnr = {}, cpr = {}' ).format(
@@ -56,8 +56,8 @@ class OpManager:
         self.ops_xml.append( op_elem )
 
     ###
-    def Add_Planting_Op( self, date, crop, density, depth, cultivar, spacing ):
-        op_elem = Init_New_Op( date )
+    def add_planting_op( self, date, crop, density, depth, cultivar, spacing ):
+        op_elem = init_new_op( date )
         action = ( '{} sow plants = {} (plants/m2), sowing_depth = {} (mm), ' +
             'cultivar = {}, row_spacing = {} (mm), crop_class = plant' ).format(
             crop, str( density ), str( depth ), cultivar, str( spacing ) )
@@ -66,15 +66,15 @@ class OpManager:
         self.ops_xml.append( op_elem )
 
     ###
-    def Add_Harvest_Op( self, date, crop ):
-        op_elem = Init_New_Op( date )
+    def add_harvest_op( self, date, crop ):
+        op_elem = init_new_op( date )
         action = ( '{} end_crop' ).format( crop )
         act_elem = SubElement( op_elem, 'action' )
         act_elem.text = action
         self.ops_xml.append( op_elem )
 
     #Add empty manager with bu/ac for corn/soy and the gradient for SWIM to work.
-    def Add_Empty_Manager( self, bbc_potential = [ 200, 100 ] ):
+    def add_empty_manager( self, bbc_potential = [ 200, 100 ] ):
         """
         Creates an empty APSIM 'Manager' folder to hold bu/ac calculationg and
         SWIM bbc_potential = profile depth - tile/water table depth

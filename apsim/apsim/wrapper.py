@@ -4,37 +4,28 @@ import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
 import apsim.soils as soils
-import apsim.daymet as daymet
+import apsim.daymet as clim
 import apsim.database as db
 import apsim.op_manager as man
 
 ###
-def Create_Soil( soil_df, SWIM = False, SaxtonRawls = False ):
-    return soils.Create_Soil_XML( soil_df, Run_SWIM = False, SaxtonRawls = False )
+def create_soil( soil_df, SWIM = False, SaxtonRawls = False ):
+    return soils.Soil( soil_df, SWIM, SaxtonRawls )
 
 ###
-def Create_Met_File( filepath, init_yr, end_yr, lat, lon ):
-    return daymet.GetDaymetData( init_yr, end_yr, lat, lon, filepath )
-
-def Create_Met_File( filepath, init_yr, end_yr ):
-    return daymet.GetDaymetData( init_yr, end_yr, lat, lon, filepath )
+def connect_to_database( filepath ):
+    return db.connect_to_db( filepath )
 
 ###
-def Connect_To_Database( filepath ):
-    return db.ConnectToDB( filepath )
-
-###
-def Create_Op_Manager():
+def create_manager():
     return man.OpManager()
 
-# ###
-# def
-#
-#     return man.Add_Till_Op( oprns, till_date, 'user_defined', till_incorp,
-#     till_depth )
+###
+def create_weather():
+    return clim.Weather()
 
 ###
-def Set_Output_Variables( out_file, var_list ):
+def set_output_variables( out_file, var_list ):
     output_xml = Element( 'outputfile' )
     filename = SubElement( output_xml, 'filename' )
     filename.set( 'name', 'filename' )
@@ -62,12 +53,12 @@ def Set_Output_Variables( out_file, var_list ):
     var_list = [ var for var in var_list
         if var not in [ 'dd/mm/yyyy as Date', 'day', 'year' ] ]
 
-    output_xml.append( Add_XY_Graph( 'Date', var_list, 'Outputs' ) )
+    output_xml.append( add_xy_graph( 'Date', var_list, 'Outputs' ) )
 
     return output_xml
 
 ###
-def Init_SurfaceOM( crop, type, mass, cn_ratio, stand_frac ):
+def init_surfaceOM( crop, type, mass, cn_ratio, stand_frac ):
     surfom_xml = Element( 'surfaceom' )
     surfom_xml.set( 'name', 'SurfaceOrganicMatter' )
     pool_elem = SubElement( surfom_xml, 'PoolName' )
@@ -94,7 +85,7 @@ def Init_SurfaceOM( crop, type, mass, cn_ratio, stand_frac ):
     return surfom_xml
 
 ###
-def Add_XY_Graph( x_var, y_vars, title ):
+def add_xy_graph( x_var, y_vars, title ):
     graph = Element( 'Graph' )
     graph.set( 'name', 'Output Plot' )
     legend = SubElement( graph, 'Legend' )
