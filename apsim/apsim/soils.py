@@ -402,7 +402,6 @@ class Soil:
         self.NH4 = soil_df[ 'om_r' ]
         self.Clay = soil_df[ 'claytotal_r' ]
         self.Sand = soil_df[ 'sandtotal_r' ]
-        self.Silt = soil_df[ 'silttotal_r' ]
         self.SWCON = soil_df[ 'swcon' ]
 
         if soil_df[ 'claytotal_r' ][0] >= 55:
@@ -440,8 +439,6 @@ class Soil:
             self.KS = 0.001 * 3600 * 24 * soil_df[ 'ksat_r' ]
             self.AirDry = soil_df[ 'AirDry' ]
             self.SAT = 1 - ( soil_df[ 'dbthirdbar_r']/2.65 ) - soil_df[ 'sat_e' ]
-
-            print( soil_df )
 
     ###
     def soil_xml( self ):
