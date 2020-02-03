@@ -9,7 +9,7 @@ import apsim.database as db
 import apsim.op_manager as man
 
 ###
-def create_soil( soil_df, SWIM = False, SaxtonRawls = False ):
+def Soil( soil_df, SWIM = False, SaxtonRawls = False ):
     return soils.Soil( soil_df, SWIM, SaxtonRawls )
 
 ###
@@ -17,11 +17,11 @@ def connect_to_database( filepath ):
     return db.connect_to_db( filepath )
 
 ###
-def create_manager():
+def OpManager():
     return man.OpManager()
 
 ###
-def create_weather():
+def Weather():
     return clim.Weather()
 
 ###
