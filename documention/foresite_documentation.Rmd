@@ -1,15 +1,17 @@
 ---
 title: "Foresite documentation"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
   word_document: default
 urlcolor: blue
+header-includes:
+- \usepackage{float}
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set( fig.pos = 'h', echo = TRUE)
 ```
 
 ##Background
@@ -43,8 +45,13 @@ Connecting to the foresite database currently requires a local connection to the
 
 To connect to the Foresite database, users must obtain a valid username and password from a Foresite Admin as well as the port number and host IP address. With this information, a new server connection can be created in the pgAdmin or Navicat tools. In pgAdmin, right-click _Servers_ in the right pane and select _Create --> Server..._ (this can also be done through the _Object_ menu). A new window should appear with a _Connection_ tab under which the host-address, port number, and user credentials can be entered. After entering this information, click _Save_. You should now see the _aepe_ database available under the _Servers_ list in the right pane. Double-clicking the server from the list will connect to the Foresite database and allow the user to access the varying schemas and tables. The _Query Tool_ can be accessed from the _Tools_ menu and provides the ability to directly access and process data.
 
-![Open new server connection.]( figures/open_new_server.jpg ){width=200px} 
-![Complete connection info.]( figures/login_new_server.jpg ){width=200px}  
+```{r echo=FALSE, fig.cap="A caption", fig.align = 'center', out.width = '30%'}
+knitr::include_graphics( "figures/open_new_server.jpg" )
+```
+
+```{r echo=FALSE, fig.cap="A caption", fig.align = 'center', out.width = '30%'}
+knitr::include_graphics( "figures/login_new_server.jpg" )
+```
 
 ###psql
 When [installing PostgreSQL](https://www.postgresqltutorial.com/install-postgresql/) on a local machine, users are given the option to install. The [_psql_](https://www.postgresql.org/docs/current/app-psql.html) utility provides command line access to PostgreSQL servers including the Foresite database. The _psql_ command and arguments can be useful in situations when query execution time is expected to be unusually long or when exporting data to a flat file format. The following examples can be used to export a database table to a tab delimited flat file as well as import a file to a database table.
@@ -92,7 +99,7 @@ __ogr2ogr -t_srs EPSG:4326 -f "PostgreSQL" PG:"user=<> host=<> port=<> dbname=<>
 
 export to Shapefile
 
-__ogr2ogr -f "ESRI Shapefile" -t_srs EPSG:4326 export_.shp PG:"host=localhost port=5431 user=gmcnunn dbname=essra password=gabriel1 active_schema=isa_test" -sql "select * from isa_test.boundary" -nlt MULTIPOLYGON -progress -overwrite__
+__ogr2ogr -f "ESRI Shapefile" -t_srs EPSG:4326 export_.shp PG:"host=<> port=<> user=<> dbname=<> password=<> active_schema=isa_test" -sql "select * from schema.tablename" -nlt MULTIPOLYGON -progress -overwrite__
 
 ### Raster data (GeoTIFF)
 
