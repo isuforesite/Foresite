@@ -43,13 +43,14 @@ Connecting to the foresite database currently requires a local connection to the
 
 ###pgAdmin/Navicat
 
-To connect to the Foresite database, users must obtain a valid username and password from a Foresite Admin as well as the port number and host IP address. With this information, a new server connection can be created in the pgAdmin or Navicat tools. In pgAdmin, right-click _Servers_ in the right pane and select _Create --> Server..._ (this can also be done through the _Object_ menu). A new window should appear with a _Connection_ tab under which the host-address, port number, and user credentials can be entered. After entering this information, click _Save_. You should now see the _aepe_ database available under the _Servers_ list in the right pane. Double-clicking the server from the list will connect to the Foresite database and allow the user to access the varying schemas and tables. The _Query Tool_ can be accessed from the _Tools_ menu and provides the ability to directly access and process data.
+To connect to the Foresite database, users must obtain a valid username and password from a Foresite Admin as well as the port number and host IP address. With this information, a new server connection can be created in the pgAdmin or Navicat tools. In pgAdmin, right-click _Servers_ in the right pane and select _Create --> Server..._ (Figure 1; this can also be done through the _Object_ menu). A new window should appear with a _Connection_ tab under which the host-address, port number, and user credentials can be entered (Figure 2). After entering this information, click _Save_. You should now see the _aepe_ database available under the _Servers_ list in the right pane. Double-clicking the server from the list will connect to the Foresite database and allow the user to access the varying schemas and tables. The _Query Tool_ can be accessed from the _Tools_ menu and provides the ability to directly access and process data.  
 
-```{r echo=FALSE, fig.cap="A caption", fig.align = 'center', out.width = '30%'}
+```{r echo=FALSE, fig.cap="Create new database connection", fig.align = 'center', out.width = '30%'}
 knitr::include_graphics( "figures/open_new_server.jpg" )
-```
+```  
 
-```{r echo=FALSE, fig.cap="A caption", fig.align = 'center', out.width = '30%'}
+
+```{r echo=FALSE, fig.cap="Complete connection information", fig.align = 'center', out.width = '30%'}
 knitr::include_graphics( "figures/login_new_server.jpg" )
 ```
 
