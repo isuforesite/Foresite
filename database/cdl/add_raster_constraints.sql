@@ -4,7 +4,7 @@
 -----
 select addrasterconstraints(
 	'cdl'::name, --rastschema
-	'cdl_30m_2013'::name, --rasttable
+	'cdl_30m_2019'::name, --rasttable
 	'rast'::name, --rastcolumn
 	true, --srid
 	true, --scale_x
