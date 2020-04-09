@@ -1,3 +1,10 @@
+"""
+Created as part of ISU C-CHANGE Foresite system
+
+@author: Matt Nowatzke
+@email: mnowatz@iastate.edu
+"""
+
 from configparser import ConfigParser
 
 def config( filename='database.ini', section='postgresql' ):

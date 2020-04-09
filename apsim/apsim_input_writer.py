@@ -1,11 +1,13 @@
 #!/usr/bin/env Python
-
+import sys
+import pathlib
 import os
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 import io
 import json
+import apsim.apsim.wrapper as apsim
 
 import apsim.wrapper as apsim
 
@@ -45,7 +47,7 @@ def add_management_year( man_ops, task, year ):
     till_depth = task[ 'depth' ]
     till_incorp = task[ 'residue_incorporation' ]
     till_date = get_date( task[ 'timing' ], year )
-    man_ops.add_till_op( till_date, 'user_defined', till_incorp, till_depth )
+    man_ops.add_till_op( till_date, till_imp, till_incorp, till_depth )
 
     ### fert specs
     n_rate = task[ 'kg_n_ha' ]

@@ -33,7 +33,7 @@ def run_sims (apsim):
     """Will execute Apsim.exe to run all .sim files in targeted folder.
     
     Arguments:
-        executable {str} -- [Path to Apsim.exe]
+        executable {str} -- System path to Apsim.exe
     """
     wd = getcwd()
     sims = glob("apsim_files/*.apsim")

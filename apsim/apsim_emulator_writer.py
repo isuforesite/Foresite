@@ -6,7 +6,7 @@ from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 import json
 
-import apsim.wrapper as apsim
+import apsim.apsim.wrapper as apsim
 
 # Connect to database
 dbconn = apsim.connect_to_database( 'database.ini' )
