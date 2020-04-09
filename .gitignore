@@ -1,5 +1,13 @@
-/.vscode
-/apsim/database.ini
+.vscode
+__pycache__
+database.ini
 /apsim/__pycache__
-/apsim/apsim_files/**
+apsim/apsim/apsim_files
+analyses/apsim_files
 /apsim/tmp.txt
+.ipynb_checkpoints
+foresite.egg-info
+analyses/*.xlsx
+analyses/database.py
+analyses/test_apsim_files
+setup.py
