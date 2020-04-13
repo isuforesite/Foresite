@@ -53,8 +53,6 @@ def set_output_variables( out_file, var_list ):
     var_list = [ var for var in var_list
         if var not in [ 'dd/mm/yyyy as Date', 'day', 'year' ] ]
 
-    output_xml.append( add_xy_graph( 'Date', var_list, 'Outputs' ) )
-
     return output_xml
 
 ###
@@ -87,7 +85,7 @@ def init_surfaceOM( crop, type, mass, cn_ratio, stand_frac ):
 ###
 def add_xy_graph( x_var, y_vars, title ):
     graph = Element( 'Graph' )
-    graph.set( 'name', 'Output Plot' )
+    graph.set( 'name', title )
     legend = SubElement( graph, 'Legend' )
     checked = SubElement( legend, 'CheckedTitles' )
     plot = SubElement( graph, 'Plot' )
