@@ -92,6 +92,8 @@ for idx,task in input_tasks.iterrows():
     lat = task[ 'wth_lat' ]
     lon = task[ 'wth_lon' ]
 
+    print( 'Processing: ' + uuid )
+
     # get soils data
     soil_query = '''select * from
         api.get_soil_properties( array[{}]::text[] )'''.format( mukey )
@@ -137,7 +139,7 @@ for idx,task in input_tasks.iterrows():
     soil = apsim.Soil(
         soil_df,
         SWIM = False,
-        SaxtonRawls = True )
+        SaxtonRawls = False )
 
     area.append( soil.soil_xml() )
 
