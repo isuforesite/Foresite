@@ -9,8 +9,6 @@ import io
 import json
 import apsim.apsim.wrapper as apsim
 
-import apsim.wrapper as apsim
-
 # Connect to database
 dbconn = apsim.connect_to_database( 'database.ini' )
 
@@ -18,7 +16,7 @@ dbconn = apsim.connect_to_database( 'database.ini' )
 SIM_NAME = 'huc12_test_job'
 START_DATE = '01/01/2016'
 END_DATE = '31/12/2018'
-INPUT_QUERY = 'select * from sandbox.huc12_inputs limit 5'
+INPUT_QUERY = 'select * from sandbox.huc12_inputs limit 0'
 input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 
 # constant spin up crops for multi-year rotation

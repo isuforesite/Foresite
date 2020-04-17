@@ -8,7 +8,8 @@ import glob
 import database as db
 
 # directory containing apsim .out files
-out_file_dir = sys.argv[1]
+out_file_dir = 'apsim_files'
+#out_file_dir = 'C:\\Users\\mnowatz\\Documents\\Dev\\aepe\\analyses\\apsim_files'
 
 file_list = glob.glob( out_file_dir + '/*.out')
 

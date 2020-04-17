@@ -96,11 +96,12 @@ class OpManager:
         #subsurface_drain and subsurface_drain_no3 won't work unless bbc_potential is se
         #!!!!!!!!!!!!!!!!!!
 
-        gradient_script_txt.text = """corn_buac   = maize.yield * 0.0159/0.85  ! corn yield in bushels/acre@15% moisture
-        !soy_buac   = soybean.yield * 0.0149/0.87  !  soybean yield in bushels/acre
+        gradient_script_txt.text = """
+        corn_buac   = maize.yield * 0.0159/0.85  ! corn yield in bushels/acre@15% moisture
+        soy_buac   = soybean.yield * 0.0149/0.87  !  soybean yield in bushels/acre
 
         !bbc_gradient = -1
-        bbc_potential = {} - {}
+        !bbc_potential = {} - {}
         """.format(bbc_potential[0],bbc_potential[1])
         gradient_event = SubElement( gradient_script, 'event' ).text = 'start_of_day'
 

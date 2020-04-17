@@ -1,0 +1,17 @@
+{
+    "implement": "disc",
+    "depth": 178,
+    "residue_incorporation": 0.70,
+    "timing": "10-apr",
+    "kg_n_ha": 220,
+    "fertilize_n_on": "18-may",
+    "n_fertilizer": "uan_n",
+    "sow_crop": "maize",
+    "cultivar": "B_105",
+    "planting_dates": "18-may",
+    "sowing_density": 8,
+    "sowing_depth": 51,
+    "row_spacing": 381,
+    "harvest": "maize",
+    "harvest_date": "15-oct"
+}
