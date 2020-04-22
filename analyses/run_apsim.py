@@ -45,7 +45,7 @@ def run_sims (apsim, sims_path="apsim_files/Greene/*.apsim"):
     failed_sims = 0
     for i in sims:
         #combine cwd and apsim file paths to give Apsim.exe a complete path.
-        complete_file_paths.append(f'{wd}\{i}')
+        complete_file_paths.append(f'{wd}/{i}')
     for i in complete_file_paths:
         #run exe on each .apsim file
             run = call([apsim, i])
