@@ -3,10 +3,10 @@
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
-import apsim.apsim.soils as soils
-import apsim.apsim.daymet as clim
-import apsim.apsim.database as db
-import apsim.apsim.op_manager as man
+import apsim.soils as soils
+import apsim.daymet as clim
+import apsim.database as db
+import apsim.op_manager as man
 
 ###
 def Soil( soil_df, SWIM = False, SaxtonRawls = False ):

@@ -1,6 +1,6 @@
 #!/usr/bin/env Python
 
-from apsim.apsim.config import config
+from apsim.config import config
 from sqlalchemy import create_engine
 
 #create a new database connection
