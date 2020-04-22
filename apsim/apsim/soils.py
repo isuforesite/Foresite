@@ -24,31 +24,45 @@ APSIM_Soil_Layers = [
     { 'min': 150.0, 'max': 200.0 }
 ]
 
-###
-def get_depth_weighted_value( apsim_lyr, var, layers ):
+###calculate depth weighted average value for a single APSIM soil layer based
+###on SSURGO horizons data
+def get_depth_weighted_value( apsim_lyr, var, ssurgo_hrzns ):
     apsim_top = apsim_lyr[ 'min' ]
     apsim_bttm = apsim_lyr[ 'max' ]
-    lyrs = layers.copy( deep = True )
-    for idx, lyr in lyrs.iterrows():
-        top = lyr[ 'hzdept_r' ]
-        bttm = lyr[ 'hzdepb_r' ]
-        if ( ( apsim_top <= top ) & ( apsim_bttm > top ) ):
-            wgt = ( apsim_bttm - top )/( apsim_bttm - apsim_top )
-        elif ( ( apsim_top < bttm ) & ( apsim_bttm >= bttm ) ):
-            wgt = ( bttm - apsim_top )/( apsim_bttm - apsim_top )
-        elif ( ( apsim_top <= top ) & ( apsim_bttm >= bttm ) ):
-            wgt = ( bttm - top )/( apsim_bttm - apsim_top )
-        elif ( ( apsim_top > top ) & ( apsim_bttm < bttm ) ):
+    hrzns = ssurgo_hrzns.copy( deep = True )
+
+    #find intersecting SSURGO layers and calculate fraction (weight) of APSIM layer
+    vals = []
+    wgts = []
+    for idx, hrzn in hrzns.iterrows():
+        top = hrzn[ 'hzdept_r' ]
+        bttm = hrzn[ 'hzdepb_r' ]
+        if ( apsim_top <= top ) & ( apsim_bttm >= bttm ):
+            wgt = (bttm - top)/(apsim_bttm - apsim_top)
+        elif ( apsim_top > top ) & ( apsim_bttm < bttm ):
             wgt = 1.0
+        elif ( apsim_top > top ) & ( apsim_top < bttm ):
+            wgt = (bttm - apsim_top)/(apsim_bttm - apsim_top)
+        elif ( apsim_bttm > top ) & ( apsim_bttm < bttm ):
+            wgt = (apsim_bttm - top)/(apsim_bttm - apsim_top)
         else:
             wgt = 0.0
-        value = var[ idx ]
-        lyrs.loc[ idx, 'wgt' ] = wgt
-        lyrs.loc[ idx, 'wgt_var' ] = wgt * value
 
-        wgt_avg = lyrs[ 'wgt_var' ].sum()
+        if wgt > 0.0:
+            wgts.append( wgt )
+            vals.append( var[ idx ] )
 
-    return wgt_avg
+    #check that weights sum to 1 - if not adjust final weight value
+    if sum( wgts ) < 1.0:
+        gap = 1.0 - sum( wgts )
+        wgts[-1] = wgts[-1] + gap
+
+    #calculate depth weighted variable value
+    wgt_vals = []
+    for idx, value in enumerate( vals ):
+        wgt_vals.append( value * wgts[ idx ] )
+
+    return sum( wgt_vals )
 
 ###
 def add_crop_xml( parent, crop_name, soil ):
