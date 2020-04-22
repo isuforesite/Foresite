@@ -77,6 +77,7 @@ def add_management_year( man_ops, task, year ):
 
 ################################################################################
 # create directories for dumping .apsim and .met files
+<<<<<<< HEAD
 # if not os.path.exists( 'apsim_files' ):
 #     os.makedirs( 'apsim_files' )
 # if not os.path.exists( 'apsim_files/met_files' ):
@@ -199,3 +200,126 @@ def add_management_year( man_ops, task, year ):
 #     tree = ElementTree()
 #     tree._setroot( apsim_xml )
 #     tree.write( outfile )
+=======
+if not os.path.exists( 'apsim_files' ):
+    os.makedirs( 'apsim_files' )
+if not os.path.exists( 'apsim_files/met_files' ):
+    os.makedirs( 'apsim_files/met_files' )
+
+# loop of tasks
+for idx,task in input_tasks.iterrows():
+    uuid = str( task[ 'uuid' ] )
+    mukey = task[ 'mukey' ]
+    fips = task[ 'fips' ]
+    lat = task[ 'wth_lat' ]
+    lon = task[ 'wth_lon' ]
+
+    print( 'Processing: ' + uuid )
+
+    # get soils data
+    soil_query = '''select * from
+        api.get_soil_properties( array[{}]::text[] )'''.format( mukey )
+    soil_df = pd.read_sql( soil_query, dbconn )
+    if soil_df.empty:
+        continue
+
+    # generate .met files
+    met_path = 'met_files/weather_{}.met'.format( fips )
+    if not os.path.exists( 'apsim_files/' + met_path ):
+        wth_obj = apsim.Weather().from_daymet( lat, lon, 1980, 2018 )
+        wth_obj.write_met_file( 'apsim_files/{}'.format( met_path ) )
+
+    # initialize .apsim xml
+    apsim_xml = Element( 'folder' )
+    apsim_xml.set( 'version', '36' )
+    apsim_xml.set( 'creator', 'Apsim_Wrapper' )
+    apsim_xml.set( 'name', 'S1' )
+    sim = SubElement( apsim_xml, 'simulation' )
+    sim.set( 'name', SIM_NAME )
+    metfile = SubElement( sim, 'metfile' )
+    metfile.set( 'name', 'foresite_weather' )
+    filename = SubElement( metfile, 'filename' )
+    filename.set( 'name', 'filename' )
+    filename.set( 'input', 'yes' )
+    filename.text = met_path
+    clock = SubElement( sim, 'clock' )
+    clock_start = SubElement( clock, 'start_date' )
+    clock_start.set( 'type', 'date' )
+    clock_start.set( 'description', 'Enter the start date of the simulation' )
+    clock_start.text = START_DATE
+    clock_end = SubElement( clock, 'end_date' )
+    clock_end.set( 'type', 'date' )
+    clock_end.set( 'description', 'Enter the end date of the simulation' )
+    clock_end.text = END_DATE
+    sumfile = SubElement( sim, 'summaryfile' )
+    area = SubElement( sim, 'area' )
+    area.set( 'name', 'paddock' )
+
+    # add soil xml
+    soil = apsim.Soil(
+        soil_df,
+        SWIM = False,
+        SaxtonRawls = False )
+
+    area.append( soil.soil_xml() )
+
+    ### surface om
+    surfom_xml = apsim.init_surfaceOM( 'maize', 'maize', 3500, 65, 0.0 )
+    area.append( surfom_xml )
+
+    ### fertilizer
+    fert_xml = SubElement( area, 'fertiliser' )
+
+    ### crops
+    crop_xml = SubElement( area, 'maize' )
+    crop_xml = SubElement( area, 'soybean' )
+    crop_xml = SubElement( area, 'wheat' )
+
+    ### output file
+    outvars = [
+        'dd/mm/yyyy as Date', 'day', 'year',
+        'yield', 'biomass', 'fertiliser',
+        'surfaceom_c', 'subsurface_drain',
+        'subsurface_drain_no3', 'leach_no3',
+        'corn_buac', 'soy_buac' ]
+    output_xml = apsim.set_output_variables( uuid + '.out', outvars )
+    area.append( output_xml )
+
+    graph_no3 = [
+        'Cumulative subsurface_drain',
+        'Cumulative subsurface_drain_no3',
+        'Cumulative leach_no3'
+    ]
+    graph_yield = [
+        'yield',
+        'biomass',
+        'corn_buac'
+    ]
+    graph_all = [
+        'yield', 'biomass', 'fertiliser',
+        'surfaceom_c', 'Cumulative subsurface_drain',
+        'Cumulative subsurface_drain_no3',
+        'Cumulative leach_no3', 'corn_buac',
+        'soy_buac'
+    ]
+
+    output_xml.append( apsim.add_xy_graph( 'Date', graph_no3, 'no3' ) )
+    output_xml.append( apsim.add_xy_graph( 'Date', graph_yield, 'yield' ) )
+    output_xml.append( apsim.add_xy_graph( 'Date', graph_all, 'all outputs' ) )
+
+    op_man = apsim.OpManager()
+    op_man.add_empty_manager()
+
+    add_management_year( op_man, spin_up_corn, 2016 )
+    add_management_year( op_man, spin_up_soybean, 2017 )
+    add_management_year( op_man, task, 2018 )
+
+    area.append( op_man.man_xml )
+
+    outfile = 'apsim_files/{}.apsim'.format( uuid )
+    print( outfile )
+    ### management data
+    tree = ElementTree()
+    tree._setroot( apsim_xml )
+    tree.write( outfile )
+>>>>>>> 8731e3ba10ecc5b50b14a571ff47a74744989ba9
