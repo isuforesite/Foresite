@@ -7,7 +7,6 @@ from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 import io
 import json
-import apsim.apsim.wrapper as apsim
 
 # Connect to database
 dbconn = apsim.connect_to_database( 'database.ini' )
@@ -111,9 +110,7 @@ for idx,task in input_tasks.iterrows():
     apsim_xml.set( 'creator', 'Apsim_Wrapper' )
     apsim_xml.set( 'name', 'S1' )
     sim = SubElement( apsim_xml, 'simulation' )
-
     sim.set( 'name', SIM_NAME )
-
     metfile = SubElement( sim, 'metfile' )
     metfile.set( 'name', 'foresite_weather' )
     filename = SubElement( metfile, 'filename' )
@@ -195,6 +192,7 @@ for idx,task in input_tasks.iterrows():
     area.append( op_man.man_xml )
 
     outfile = 'apsim_files/{}.apsim'.format( uuid )
+    print( outfile )
     ### management data
     tree = ElementTree()
     tree._setroot( apsim_xml )
