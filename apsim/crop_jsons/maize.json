@@ -6,6 +6,7 @@
     "kg_n_ha": 220,
     "fertilize_n_on": "18-may",
     "n_fertilizer": "uan_n",
+    "fert_depth": 50.0,
     "sow_crop": "maize",
     "cultivar": "B_105",
     "planting_dates": "18-may",
