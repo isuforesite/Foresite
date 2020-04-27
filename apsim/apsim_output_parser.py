@@ -17,33 +17,33 @@ def parse_all_output(out_file_dir, db_path, db_schema, db_table):
     for file in file_list:
         # read file
         daily_df = pd.read_csv( file, header = 3, delim_whitespace = True )
-        #rename columns
-        daily_df.rename(columns = {'paddock.soybean.yield':'soybean_yield', 'paddock.maize.yield':'maize_yield', 'paddock.maize.biomass':'maize_biomass', 'paddock.soybean.biomass':'soybean_biomass'}, inplace = True)
-        #get the header row with mukey, clukey, county info and extract via regex
-        df_header = str(pd.read_csv(file, header=2, nrows=0).columns.values)
+        daily_df = daily_df.drop( [0] )
+        #get the title with mukey, clukey, county info and extract via regex
+        df_header = daily_df['title'][1]
         county_pattern = "County_(.*?)_fips"
         county = str(re.search(county_pattern, df_header).group(1))
         mukey_pattern = "mukey_(.*?)_rot"
         mukey = int(re.search(mukey_pattern, df_header).group(1))
         fips_pattern = "fips_(.*?)_mukey"
         fips = re.search(fips_pattern, df_header).group(1)
-        #insert new columns with mukey and county fip
-        daily_df.insert(0, 'county', county)
-        daily_df.insert(1, 'fips', fips)
-        daily_df.insert(2, 'mukey', mukey)
+        rot_pattern = "rot_(.*?)_sim"
+        rotation = str(re.search(rot_pattern, df_header).group(1))
+        #insert new columns with mukey county fip rot
+        daily_df.insert(1, 'county', county)
+        daily_df.insert(2, 'fips', fips)
+        daily_df.insert(3, 'mukey', mukey)
+        daily_df.insert(4, 'rotation', rotation)
         daily_df = daily_df.reset_index( drop = True )
-        #drop first row that has unit names
-        daily_df = daily_df.drop( [0] )
         #replace all ? with NaN
         daily_df = daily_df.replace("?", np.nan)
-        daily_df['Date'] = pd.to_datetime(daily_df['Date']).dt.date
+        daily_df['date'] = pd.to_datetime(daily_df['date']).dt.date
 
         # cast explicit data types for processing
         daily_df = daily_df.astype( {
             'county' : 'string',
             'fips' : 'string',
             'mukey' : 'int64',
-            #'Date' : 'datetime64',
+            'rotation' : 'string',
             'day': 'int64',
             'year': 'int64',
             'soybean_yield': 'float64',
@@ -73,37 +73,39 @@ def parse_all_output(out_file_dir, db_path, db_schema, db_table):
 def parse_summary_output(out_file_dir, db_path, db_schema, db_table):
     dbconn = db.connect_to_db(db_path)
     file_list = glob.glob( out_file_dir + '/*.out')
-    push_dict = []
+    push_data = []
     for file in file_list:
         # read file
         daily_df = pd.read_csv( file, header = 3, delim_whitespace = True )
-        #rename columns
-        daily_df.rename(columns = {'paddock.soybean.yield':'soybean_yield', 'paddock.maize.yield':'maize_yield', 'paddock.maize.biomass':'maize_biomass', 'paddock.soybean.biomass':'soybean_biomass'}, inplace = True)
+        daily_df = daily_df.drop( [0] )
         #get the header row with mukey, clukey, county info and extract via regex
-        df_header = str(pd.read_csv(file, header=2, nrows=0).columns.values)
+        df_header = daily_df['title'][1]
         county_pattern = "County_(.*?)_fips"
         county = str(re.search(county_pattern, df_header).group(1))
         mukey_pattern = "mukey_(.*?)_rot"
         mukey = int(re.search(mukey_pattern, df_header).group(1))
         fips_pattern = "fips_(.*?)_mukey"
         fips = re.search(fips_pattern, df_header).group(1)
+        rot_pattern = "rot_(.*?)_sim"
+        rotation = re.search(rot_pattern, df_header).group(1)
         #insert new columns with mukey and county fip
-        daily_df.insert(0, 'county', county)
-        daily_df.insert(1, 'fips', fips)
-        daily_df.insert(2, 'mukey', mukey)
+        daily_df.insert(1, 'county', county)
+        daily_df.insert(2, 'fips', fips)
+        daily_df.insert(3, 'mukey', mukey)
+        daily_df.insert(4, 'rotation', rotation)
         daily_df = daily_df.reset_index( drop = True )
         #drop first row that has unit names
-        daily_df = daily_df.drop( [0] )
         #replace all ? with NaN
         daily_df = daily_df.replace("?", np.nan)
-        daily_df['Date'] = pd.to_datetime(daily_df['Date']).dt.date
+        daily_df['date'] = pd.to_datetime(daily_df['date']).dt.date
 
         # cast explicit data types for processing
         daily_df = daily_df.astype( {
+            'title' : 'string',
             'county' : 'string',
             'fips' : 'string',
             'mukey' : 'int64',
-            'Date' : 'datetime64',
+            'rotation' : 'string',
             'day': 'int64',
             'year': 'int64',
             'soybean_yield': 'float64',
@@ -123,9 +125,11 @@ def parse_summary_output(out_file_dir, db_path, db_schema, db_table):
         df_year = daily_df.loc[daily_df['year'] == last_year].reset_index(drop=True)
         # perform simple analytics at time scale (here we only do year)
         data = {
+            'title' : df_year['title'][1],
             'county' : county,
             'fips': fips,
             'mukey' : mukey,
+            'rotation' : rotation,
             'year': last_year,
             'soybean_yield': df_year[ 'soybean_yield' ].max(),
             'maize_yield': df_year[ 'maize_yield' ].max(),
@@ -141,8 +145,8 @@ def parse_summary_output(out_file_dir, db_path, db_schema, db_table):
             #'subsurface_drain_no3': df_year[ 'subsurface_drain_no3' ].sum(),
             'leach_no3': df_year[ 'leach_no3' ].sum()
         }
-        push_dict.append(data)
-    push_df = pd.DataFrame().append(push_dict, True)
+        push_data.append(data)
+    push_df = pd.DataFrame().append(push_data, ignore_index=True)
 
     push_df.to_sql(
         name = db_table,
