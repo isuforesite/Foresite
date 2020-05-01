@@ -41,11 +41,16 @@ def get_date( date_str, year ):
 ###
 def add_management_year( man_ops, task, year ):
     ### tillage specs
-    till_imp = task[ 'implement' ]
-    till_depth = task[ 'depth' ]
-    till_incorp = task[ 'residue_incorporation' ]
-    till_date = get_date( task[ 'timing' ], year )
-    man_ops.add_till_op( till_date, till_imp, till_incorp, till_depth )
+    spring_till_imp = task[ 'spring_implement' ]
+    spring_till_depth = task[ 'spring_depth' ]
+    spring_till_incorp = task[ 'spring_residue_incorporation' ]
+    spring_till_date = get_date( task[ 'spring_timing' ], year )
+    man_ops.add_spring_till_op( spring_till_date, spring_till_imp, spring_till_incorp, spring_till_depth )
+    fall_till_imp = task[ 'fall_implement' ]
+    fall_till_depth = task[ 'fall_depth' ]
+    fall_till_incorp = task[ 'fall_residue_incorporation' ]
+    fall_till_date = get_date( task[ 'fall_timing' ], year )
+    man_ops.add_fall_till_op( fall_till_date, fall_till_imp, fall_till_incorp, fall_till_depth )
 
     ### fert specs
     n_rate = task[ 'kg_n_ha' ]
