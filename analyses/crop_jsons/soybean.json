@@ -14,9 +14,9 @@
     "sow_crop": "soybean",
     "cultivar": "MG_2",
     "planting_dates": "18-may",
-    "sowing_density": 30,
+    "sowing_density": 35,
     "sowing_depth": 51,
-    "row_spacing": 381,
+    "row_spacing": 762,
     "harvest": "maize",
     "harvest_date": "1-oct"
 }
