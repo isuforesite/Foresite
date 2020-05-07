@@ -7,11 +7,16 @@ import pandas as pd
 import numpy as np
 import glob
 import re
-import math
-import apsim.database as db
+#import apsim.database as db
 
-def parse_all_output(out_file_dir, db_path, db_schema, db_table):
-    dbconn = db.connect_to_db(db_path)
+def parse_all_output(out_file_dir): #, db_path, db_schema, db_table
+    """Parses all .out files daily data and returns df for last year
+    Arguments:
+        out_file_dir {str} -- path to folder that contains .out files
+    Returns:
+        [df object] -- dataframe with daily data for each .out file
+    """
+    #dbconn = db.connect_to_db(db_path)
     file_list = glob.glob( out_file_dir + '/*.out')
     push_df = pd.DataFrame()
     for file in file_list:
@@ -62,16 +67,22 @@ def parse_all_output(out_file_dir, db_path, db_schema, db_table):
         last_year = daily_df['year'].unique()[-1]
         df_year = daily_df.loc[daily_df['year'] == last_year].reset_index(drop=True)
         push_df = push_df.append(df_year)
+    return push_df
+    # push_df.to_sql(
+    #     name = db_table,
+    #     con = dbconn,
+    #     schema = db_schema,
+    #     if_exists = 'replace',
+    #     index = False )
 
-    push_df.to_sql(
-        name = db_table,
-        con = dbconn,
-        schema = db_schema,
-        if_exists = 'replace',
-        index = False )
-
-def parse_summary_output(out_file_dir, db_path, db_schema, db_table):
-    dbconn = db.connect_to_db(db_path)
+def parse_summary_output(out_file_dir): #, db_path, db_schema, db_table
+    """Parses all .out files, does some summary stats, and returns df for last year
+    Arguments:
+        out_file_dir {str} -- path to folder that contains .out files
+    Returns:
+        [object] -- df with summary data for each .out file
+    """
+    #dbconn = db.connect_to_db(db_path)
     file_list = glob.glob( out_file_dir + '/*.out')
     push_data = []
     for file in file_list:
@@ -147,19 +158,20 @@ def parse_summary_output(out_file_dir, db_path, db_schema, db_table):
         }
         push_data.append(data)
     push_df = pd.DataFrame().append(push_data, ignore_index=True)
-
-    push_df.to_sql(
-        name = db_table,
-        con = dbconn,
-        schema = db_schema,
-        if_exists = 'replace',
-        index = False )
+    return push_df
+    # push_df.to_sql(
+    #     name = db_table,
+    #     con = dbconn,
+    #     schema = db_schema,
+    #     if_exists = 'replace',
+    #     index = False )
 
 if __name__ == "__main__":
-    out_file_dir = 'C:\\Users\\mnowatz\\Documents\\Dev\\aepe\\analyses\\apsim_files\\Greene'
-    db_path = 'database.ini'
-    db_schema = 'sandbox'
-    db_table = 'apsim_output_summary' 
-    parse_summary_output(out_file_dir, db_path, db_schema, db_table)
-    db_table = 'apsim_output_all' 
-    parse_all_output(out_file_dir, db_path, db_schema, db_table)
+    pass
+    # out_file_dir = 'C:\\Users\\mnowatz\\Documents\\Dev\\aepe\\analyses\\apsim_files\\Greene'
+    # db_path = 'database.ini'
+    # db_schema = 'raccoon'
+    # db_table = 'apsim_output_summary' 
+    # parse_summary_output(out_file_dir, db_path, db_schema, db_table)
+    # db_table = 'apsim_output_all' 
+    # parse_all_output(out_file_dir, db_path, db_schema, db_table)
