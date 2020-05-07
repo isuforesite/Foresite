@@ -7,11 +7,11 @@ from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 from analyses.munging import get_rotation
 import io
-#import json
+import json
 import apsim.wrapper as apsim
 
 # Connect to database
-# dbconn = apsim.connect_to_database( 'database.ini' )
+dbconn = apsim.connect_to_database( 'database.ini' )
 
 # # query scenarios to generate inputs
 # SIM_NAME = 'huc12_test_job'
@@ -21,8 +21,8 @@ import apsim.wrapper as apsim
 # input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 
 # # constant spin up crops for multi-year rotation
-# spin_up_corn = json.loads( open( 'crop_jsons/maize.json', 'r' ).read() )
-# spin_up_soybean = json.loads( open( 'crop_jsons/soybean.json', 'r' ).read() )
+spin_up_corn = json.loads( open( 'crop_jsons/maize.json', 'r' ).read() )
+spin_up_soybean = json.loads( open( 'crop_jsons/soybean.json', 'r' ).read() )
 
 ###
 def get_date( date_str, year ):
@@ -240,7 +240,7 @@ def create_apsim_files(df, rotations_df, dbconn, field_key='clukey', soil_key='m
                 sim_count +=1
                 continue
 
-def create_mukey_runs(soils_list, dbconn, rotation, county_name, fips, start_year=2016, end_year=2018):
+def create_mukey_runs(soils_list, dbconn, rotation, county_name, fips, start_year=2016, end_year=2018, swim = False, saxton=True):
     if not os.path.exists(f'apsim_files/{county_name}'):
         os.makedirs(f'apsim_files/{county_name}')
     start_date = f'01/01/{start_year}'
@@ -291,7 +291,7 @@ def create_mukey_runs(soils_list, dbconn, rotation, county_name, fips, start_yea
             area.set( 'name', 'paddock' )
 
             # add soil xml
-            soil = apsim.Soil( soil_df, SWIM = False, SaxtonRawls = True )
+            soil = apsim.Soil( soil_df, swim, saxton )
             area.append( soil.soil_xml() )
             ### surface om
             if rotation == 'cfs':
@@ -388,6 +388,11 @@ def create_mukey_runs(soils_list, dbconn, rotation, county_name, fips, start_yea
             sim_count +=1
             continue
 
+if __name__ == "__main__":
+    soils_test_list = (1453495, 1453495)
+    create_mukey_runs(soils_test_list, dbconn, 'sfc', 'Greene', 'IA073')
+    create_mukey_runs(soils_test_list, dbconn, 'cc', 'Greene', 'IA073')
+    create_mukey_runs(soils_test_list, dbconn, 'cfs', 'Greene', 'IA073')
 
 ################################################################################
 # create directories for dumping .apsim and .met files
