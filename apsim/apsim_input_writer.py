@@ -1,12 +1,12 @@
 #!/usr/bin/env Python
-#import sys
-#import pathlib
-#import os
+import sys
+import pathlib
+import os
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 from analyses.munging import get_rotation
-#import io
+import io
 #import json
 import apsim.wrapper as apsim
 
