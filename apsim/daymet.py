@@ -3,7 +3,10 @@
 import requests
 import pandas as pd
 import io
-from analyses.munging import get_county, get_centroid 
+from analyses.munging import get_county, get_centroid
+from openpyxl import Workbook
+from openpyxl.styles import Alignment
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 DAYMET_URL = 'https://daymet.ornl.gov/single-pixel/api/data'
 
@@ -290,7 +293,7 @@ def create_excel_met(lat, long, start_year, end_year, county_name):
     tav = round(wth_df[ 'maxt' ].mean(), 1)
     amp = round(wth_df['maxt'].max(), 1)
     #greene_df.to_excel('greene.xlsx', index=False)
-    wb = openpyxl.Workbook()
+    wb = Workbook()
     ws = wb.active
     ws.alignment = Alignment(horizontal="left")
     for r in dataframe_to_rows(wth_df, index=False, header=True):
