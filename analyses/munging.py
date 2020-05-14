@@ -2,10 +2,10 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 import database as db
+import traceback
 
 '''
 Returns a list of all unique entries in a database column.
-
 Args:
     dbconn {database connection} -- connection to postgresql database
     table {str} -- table name
@@ -18,7 +18,8 @@ def get_distinct(dbconn, table, id_column):
     entries = entries[id_column].tolist()
     return entries
 
-'''Get info for a county of interest from a geopandas df
+'''
+Get info for a county of interest from a geopandas df
 Args:
     dbconn {database connection} -- connection to postgresql database
     table {str} -- name of geopd table
@@ -38,7 +39,6 @@ def get_county(dbconn, table, fips, geom, limit=False, limit_num=100):
 
 '''
 Find and return the centroid of a geopandas geometry
-
 Args: 
     geodf {dataframe} -- geopandas dataframe
     id {string} -- the id of interest in the geodf (e.g., 'fips' for county column)
@@ -61,11 +61,9 @@ def get_centroid(geodf, id, geometry):
 
 """
 Get the crop rotation for each clukey.
-
 Args:
     df {obj} -- Dataframe that contains individual clukey information.
     crop_column {str} -- Column name that contains the label for what crop is growing for a given year.
-
 Returns:
     Str of the rotation. e.g., 'cs' = corn-soy
 """
@@ -93,5 +91,6 @@ def get_rotation(df, crop_column):
         else:
             rotation = 'other'
         return rotation
-    except:
+    except Exception:
         print('Something went wrong')
+        traceback.print_exc()
