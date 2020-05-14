@@ -21,8 +21,9 @@ dbconn = apsim.connect_to_database( 'database.ini' )
 # input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 
 # # constant spin up crops for multi-year rotation
-spin_up_corn = json.loads( open( 'crop_jsons/maize.json', 'r' ).read() )
-spin_up_soybean = json.loads( open( 'crop_jsons/soybean.json', 'r' ).read() )
+cfs_mgmt = json.loads( open( 'crop_jsons/cfs.json', 'r' ).read() )
+cc_mgmt = json.loads( open( 'crop_jsons/cc.json', 'r' ).read() )
+sfc_mgmt = json.loads( open( 'crop_jsons/sfc.json', 'r' ).read() )
 
 ###
 def get_date( date_str, year ):
@@ -213,17 +214,17 @@ def create_apsim_files(df, rotations_df, dbconn, field_key='clukey', soil_key='m
                 op_man = apsim.OpManager()
                 op_man.add_empty_manager()
                 if rotation == 'cfs':
-                    add_management_year(op_man, spin_up_corn, 2016)
-                    add_management_year(op_man, spin_up_soybean, 2017)
-                    add_management_year(op_man, spin_up_corn, 2018)
+                    add_management_year(op_man, cfs_mgmt, 2016)
+                    add_management_year(op_man, sfc_mgmt, 2017)
+                    add_management_year(op_man, cfs_mgmt, 2018)
                 elif rotation == 'sfc':
-                    add_management_year(op_man, spin_up_soybean, 2016)
-                    add_management_year(op_man, spin_up_corn, 2017)
-                    add_management_year(op_man, spin_up_soybean, 2018)
+                    add_management_year(op_man, sfc_mgmt, 2016)
+                    add_management_year(op_man, cfs_mgmt, 2017)
+                    add_management_year(op_man, sfc_mgmt, 2018)
                 elif rotation == 'cc':
-                    add_management_year(op_man, spin_up_corn, 2016)
-                    add_management_year(op_man, spin_up_corn, 2017)
-                    add_management_year(op_man, spin_up_corn, 2018)
+                    add_management_year(op_man, cc_mgmt, 2016)
+                    add_management_year(op_man, cc_mgmt, 2017)
+                    add_management_year(op_man, cc_mgmt, 2018)
                 else:
                     continue
                 area.append( op_man.man_xml )
@@ -360,17 +361,19 @@ def create_mukey_runs(soils_list, dbconn, rotation, county_name, fips, start_yea
             op_man = apsim.OpManager()
             op_man.add_empty_manager()
             if rotation == 'cfs':
-                add_management_year(op_man, spin_up_corn, 2016)
-                add_management_year(op_man, spin_up_soybean, 2017)
-                add_management_year(op_man, spin_up_corn, 2018)
+                add_management_year(op_man, cfs_mgmt, 2016)
+                add_management_year(op_man, sfc_mgmt, 2017)
+                add_management_year(op_man, cfs_mgmt, 2018)
             elif rotation == 'sfc':
-                add_management_year(op_man, spin_up_soybean, 2016)
-                add_management_year(op_man, spin_up_corn, 2017)
-                add_management_year(op_man, spin_up_soybean, 2018)
+                add_management_year(op_man, sfc_mgmt, 2016)
+                add_management_year(op_man, cfs_mgmt, 2017)
+                add_management_year(op_man, sfc_mgmt, 2018)
+            elif rotation == 'cc':
+                add_management_year(op_man, cc_mgmt, 2016)
+                add_management_year(op_man, cc_mgmt, 2017)
+                add_management_year(op_man, cc_mgmt, 2018)
             else:
-                add_management_year(op_man, spin_up_corn, 2016)
-                add_management_year(op_man, spin_up_corn, 2017)
-                add_management_year(op_man, spin_up_corn, 2018)
+                continue
             
             area.append( op_man.man_xml )
             outfile = f'apsim_files/{county_name}/{county_name}_{soil_id}_{rotation}.apsim'
