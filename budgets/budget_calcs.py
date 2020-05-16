@@ -51,7 +51,10 @@ class Budget:
         Returns:
             float -- cost of seed per acre
         """
-        self.seed_cost_acre = ((seed_rate * seed_price)/1000) * self.acres
+        if self.current_crop == 'corn':
+            self.seed_cost_acre = ((seed_rate/1000) * seed_price) * self.acres
+        elif self.current_crop == 'soybean':
+            self.seed_cost_acre = ((seed_rate/140000) * seed_price) * self.acres
         self.expenses['seed']= self.seed_cost_acre
         return self.seed_cost_acre
 
