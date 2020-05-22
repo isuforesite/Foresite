@@ -1,12 +1,12 @@
 {
-    "fall_implement": "user_defined",
-    "fall_depth": 178,
-    "fall_residue_incorporation": 0.50,
-    "fall_timing": "01-nov",
-    "spring_implement": "user_defined",
-    "spring_depth": 50.80,
-    "spring_residue_incorporation": 0.20,
-    "spring_timing": "25-apr",
+    "primary_tillage_implement": "user_defined",
+    "primary_tillage_depth": 178,
+    "primary_tillage_residue_incorporation": 0.50,
+    "primary_tillage_timing": "01-nov",
+    "secondary_tillage_implement": "user_defined",
+    "secondary_tillage_depth": 50.80,
+    "secondary_tillage_residue_incorporation": 0.20,
+    "secondary_tillage_timing": "25-apr",
     "kg_n_ha": null,
     "fertilize_n_on": null,
     "n_fertilizer": null,
@@ -17,6 +17,6 @@
     "sowing_density": 35,
     "sowing_depth": 51,
     "row_spacing": 762,
-    "harvest": "maize",
+    "harvest": "soybean",
     "harvest_date": "1-oct"
 }

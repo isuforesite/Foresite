@@ -42,17 +42,19 @@ def get_date( date_str, year ):
 
 ###
 def add_management_year( man_ops, task, year ):
-    ### tillage specs
-    spring_till_imp = task[ 'spring_implement' ]
-    spring_till_depth = task[ 'spring_depth' ]
-    spring_till_incorp = task[ 'spring_residue_incorporation' ]
-    spring_till_date = get_date( task[ 'spring_timing' ], year )
-    man_ops.add_spring_till_op( spring_till_date, spring_till_imp, spring_till_incorp, spring_till_depth )
-    fall_till_imp = task[ 'fall_implement' ]
-    fall_till_depth = task[ 'fall_depth' ]
-    fall_till_incorp = task[ 'fall_residue_incorporation' ]
-    fall_till_date = get_date( task[ 'fall_timing' ], year )
-    man_ops.add_fall_till_op( fall_till_date, fall_till_imp, fall_till_incorp, fall_till_depth )
+    ### primary tillage specs
+    primary_till_imp = task[ 'spring_implement' ]
+    primary_till_depth = task[ 'spring_depth' ]
+    primary_till_incorp = task[ 'spring_residue_incorporation' ]
+    primary_till_date = get_date( task[ 'spring_timing' ], year )
+    man_ops.add_primary_till_op( primary_till_date, primary_till_imp, primary_till_incorp, primary_till_depth )
+
+    ###secondary tillage specs
+    secondary_till_imp = task[ 'fall_implement' ]
+    secondary_till_depth = task[ 'fall_depth' ]
+    secondary_till_incorp = task[ 'fall_residue_incorporation' ]
+    secondary_till_date = get_date( task[ 'fall_timing' ], year )
+    man_ops.add_secondary_till_op( secondary_till_date, secondary_till_imp, secondary_till_incorp, secondary_till_depth )
 
     ### fert specs
     n_rate = task[ 'kg_n_ha' ]
