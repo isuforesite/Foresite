@@ -3,6 +3,7 @@
 import requests
 import pandas as pd
 import io
+import os
 from analyses.munging import get_county, get_centroid
 from openpyxl import Workbook
 from openpyxl.styles import Alignment
@@ -287,7 +288,9 @@ class Weather:
         self.data = wth_df.append( self.data, sort = False )
         self.data = self.data.round( 2 )
 
-def create_excel_met(lat, long, start_year, end_year, county_name):
+def create_excel_met(lat, long, start_year, end_year, met_name):
+    if not os.path.exists(f'apsim_files/{met_name}/met_files'):
+        os.makedirs(f'apsim_files/{met_name}/met_files')
     wth_obj = Weather().from_daymet(lat, long, 1980, 2019)
     wth_df = wth_obj.data
     tav = round(wth_df[ 'maxt' ].mean(), 1)
@@ -325,7 +328,7 @@ def create_excel_met(lat, long, start_year, end_year, county_name):
     ws['A1'] = 'stationname = Daymet weather'
     ws.insert_rows(1)
     ws['A1'] = '[weather.met.weather]'
-    wb.save(f'apsim_files/{county_name}/met_files/{county_name}.xlsx')
+    wb.save(f'apsim_files/{met_name}/met_files/{met_name}.xlsx')
 
 
 '''
