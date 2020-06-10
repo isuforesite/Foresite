@@ -2,7 +2,7 @@ from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
 import numpy as np
 
-###
+### APSIM soil layers
 APSIM_Soil_Layers = [
     { 'min': 0.0, 'max': 2.0 },
     { 'min': 2.0, 'max': 4.0 },
@@ -22,9 +22,10 @@ APSIM_Soil_Layers = [
     { 'min': 150.0, 'max': 200.0 }
 ]
 
-###calculate depth weighted average value for a single APSIM soil layer based
-###on SSURGO horizons data
+###
 def get_depth_weighted_value( apsim_lyr, var, ssurgo_hrzns ):
+    """Returns depth weighted value of SSURGO horizon data based on defined
+    upper and lower APSIM layer depths."""
     apsim_top = apsim_lyr[ 'min' ]
     apsim_bttm = apsim_lyr[ 'max' ]
     hrzns = ssurgo_hrzns.copy( deep = True )
@@ -64,6 +65,8 @@ def get_depth_weighted_value( apsim_lyr, var, ssurgo_hrzns ):
 
 ###
 def add_crop_xml( parent, crop_name, soil ):
+    """Create crop specific soil water XML."""
+    upper and lower APSIM layer depths."""
     crop_elem = SubElement( parent, 'SoilCrop' )
     crop_elem.set( 'name', crop_name )
     add_subelements( crop_elem, 'Thickness' )
@@ -104,6 +107,7 @@ def add_crop_xml( parent, crop_name, soil ):
 
 ###
 def add_subelements( parent, child, var = pd.DataFrame(), depths = None ):
+    """Add XML subelements for a specific variable across each APSIM layer."""
     child_elem = SubElement( parent, child )
     for lyr in APSIM_Soil_Layers:
         if var.empty:
@@ -117,33 +121,37 @@ def add_subelements( parent, child, var = pd.DataFrame(), depths = None ):
 
 ###
 def add_subelement( parent, child, value ):
+    """Add XML element with flat value."""
     subelem = SubElement( parent, child )
     subelem.text = str( round( value, 3 ) )
 
     return subelem
 
 ###
-def set_value_by_depth( soil_df, var_name, min, max, value, eqn = None ):
+def set_value_by_depth( soil_df, var_name, min_depth, max_depth, value,
+    eqn = None ):
+    """Set constant soil variable value based on upper and lower depth."""
     if value != None:
         if max == None:
-            soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min ), var_name ] = value
+            soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min_depth ), var_name ] = value
         else:
-            soil_df.loc[ ( soil_df[ 'hzdept_r' ] >= min ) &
-                ( soil_df[ 'hzdept_r' ] < max ), var_name ] = value
+            soil_df.loc[ ( soil_df[ 'hzdept_r' ] >= min_depth ) &
+                ( soil_df[ 'hzdept_r' ] < max_depth ), var_name ] = value
     elif eqn != None:
         if max == None:
-            soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min ), var_name ] = eqn(
-                soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min ) ] )
+            soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min_depth ), var_name ] = eqn(
+                soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min_depth ) ] )
         else:
-            soil_df.loc[ ( soil_df[ 'hzdept_r' ] >= min ) &
-                ( soil_df[ 'hzdept_r' ] < max ), var_name ] = eqn(
-                    soil_df.loc[ ( soil_df[ 'hzdept_r' ] >= min ) &
-                        ( soil_df[ 'hzdept_r' ] < max ) ] )
+            soil_df.loc[ ( soil_df[ 'hzdept_r' ] >= min_depth ) &
+                ( soil_df[ 'hzdept_r' ] < max_depth ), var_name ] = eqn(
+                    soil_df.loc[ ( soil_df[ 'hzdept_r' ] >= min_depth ) &
+                        ( soil_df[ 'hzdept_r' ] < max_depth ) ] )
 
     return
 
 ###
 def calculate_saxton_rawls( soil_df ):
+    """Add calculated Saxton-Rawls variables to soils dataframe"""
     S = soil_df[ 'sandtotal_r' ] * 0.01
     C = soil_df[ 'claytotal_r' ] * 0.01
     OM = soil_df[ 'om_r' ] * 0.01
@@ -200,6 +208,7 @@ def calculate_saxton_rawls( soil_df ):
 
 ###
 def get_swim_xml( lyr_cnt = 3 ):
+    """Create SWIM XML"""
     swim = Element( 'Swim' )
     salb = SubElement(swim, 'Salb').text = str( 0.13 )
     cn2bare = SubElement(swim, 'CN2Bare').text = str( 75 )
@@ -270,6 +279,7 @@ def get_swim_xml( lyr_cnt = 3 ):
 
 ###
 def get_soilwat_xml( soil ):
+    """Return soil-water XML for given soil object."""
     ### get ave clay in profile
     tot_clay = 0.0
     for lyr in APSIM_Soil_Layers:
@@ -344,6 +354,7 @@ def get_soilwat_xml( soil ):
 
 ###
 class Soil:
+    """Soils data object"""
     ###
     def __init__( self, soil_df, SWIM = False, SaxtonRawls = False ):
         self.data = soil_df
@@ -460,6 +471,7 @@ class Soil:
 
     ###
     def soil_xml( self ):
+        """Return APSIM soil xml."""
         # construct soil xml
         soil_xml = Element( 'Soil' )
 
