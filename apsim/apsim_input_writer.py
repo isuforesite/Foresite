@@ -76,10 +76,7 @@ def add_management_year( man_ops, task, year ):
     man_ops.add_plant_op( plant_date, crop, dens, depth, cult, space )
 
     harvest_crop = crop
-    if crop == 'maize':
-        harvest_date = str ( '15-oct' )
-    elif crop == 'soybean':
-        harvest_date = str ( '5-oct' )
+    harvest_date = task['harvest_date']
     harvest_date = get_date( harvest_date, year )
     man_ops.add_harvest_op( harvest_date, harvest_crop )
 
@@ -394,7 +391,7 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, county_name, fips, st
             sim_count +=1
             continue
 
-def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field', start_year=2016, end_year=2018, sfc_mgmt=None, cfs_mgt=None, cc_mgmt=None, swim = False, saxton=True):
+def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field', start_year=2016, end_year=2018, sfc_mgmt=None, cfs_mgmt=None, cc_mgmt=None, swim = False, saxton=True):
     if not os.path.exists(f'apsim_files/{field_name}'):
         os.makedirs(f'apsim_files/{field_name}')
     start_date = f'01/01/{start_year}'
