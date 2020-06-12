@@ -1,5 +1,5 @@
 {
-    "primary_tillage__implement": "user_defined",
+    "primary_tillage_implement": "user_defined",
     "primary_tillage_depth": 178,
     "primary_tillage_residue_incorporation": 0.50,
     "primary_tillage_timing": "01-nov",
