@@ -65,7 +65,7 @@ def get_depth_weighted_value( apsim_lyr, var, ssurgo_hrzns ):
 
 ###
 def add_crop_xml( parent, crop_name, soil ):
-    """Create crop specific soil water XML."""
+    """Create crop specific soil water XML.
     upper and lower APSIM layer depths."""
     crop_elem = SubElement( parent, 'SoilCrop' )
     crop_elem.set( 'name', crop_name )
