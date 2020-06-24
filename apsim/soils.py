@@ -13,12 +13,12 @@ APSIM_Soil_Layers = [
     { 'min': 15.0, 'max': 20.0 },
     { 'min': 20.0, 'max': 25.0 },
     { 'min': 25.0, 'max': 30.0 },
-    { 'min': 30.0, 'max': 35.0 },
-    { 'min': 35.0, 'max': 40.0 },
+    { 'min': 30.0, 'max': 40.0 },
     { 'min': 40.0, 'max': 50.0 },
-    { 'min': 50.0, 'max': 75.0 },
-    { 'min': 75.0, 'max': 100.0 },
-    { 'min': 100.0, 'max': 150.0 },
+    { 'min': 50.0, 'max': 60.0 },
+    { 'min': 60.0, 'max': 90.0 },
+    { 'min': 90.0, 'max': 120.0 },
+    { 'min': 120.0, 'max': 150.0 },
     { 'min': 150.0, 'max': 200.0 }
 ]
 
@@ -28,11 +28,10 @@ def get_depth_weighted_value( apsim_lyr, var, ssurgo_hrzns ):
     upper and lower APSIM layer depths."""
     apsim_top = apsim_lyr[ 'min' ]
     apsim_bttm = apsim_lyr[ 'max' ]
-    hrzns = ssurgo_hrzns.copy( deep = True )
-
     #find intersecting SSURGO layers and calculate fraction (weight) of APSIM layer
     vals = []
     wgts = []
+    hrzns = ssurgo_hrzns.copy( deep = True )
     for idx, hrzn in hrzns.iterrows():
         top = hrzn[ 'hzdept_r' ]
         bttm = hrzn[ 'hzdepb_r' ]
