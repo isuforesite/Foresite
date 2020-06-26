@@ -131,13 +131,13 @@ def set_value_by_depth( soil_df, var_name, min_depth, max_depth, value,
     eqn = None ):
     """Set constant soil variable value based on upper and lower depth."""
     if value != None:
-        if max == None:
+        if max_depth == None:
             soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min_depth ), var_name ] = value
         else:
             soil_df.loc[ ( soil_df[ 'hzdept_r' ] >= min_depth ) &
                 ( soil_df[ 'hzdept_r' ] < max_depth ), var_name ] = value
     elif eqn != None:
-        if max == None:
+        if max_depth == None:
             soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min_depth ), var_name ] = eqn(
                 soil_df.loc[ ( soil_df[ 'hzdepb_r' ] >= min_depth ) ] )
         else:
