@@ -391,7 +391,7 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, county_name, fips, st
             sim_count +=1
             continue
 
-def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field', start_year=2016, end_year=2018, sfc_mgmt=None, cfs_mgmt=None, cc_mgmt=None, swim = False, saxton=True):
+def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field', start_year=2016, end_year=2018, sfc_mgmt=None, cfs_mgmt=None, cc_mgmt=None, swim = False, saxton=False):
     if not os.path.exists(f'apsim_files/{field_name}'):
         os.makedirs(f'apsim_files/{field_name}')
     start_date = f'01/01/{start_year}'
