@@ -1,6 +1,5 @@
 #!/usr/bin/env Python
-import sys
-sys.path.append( '../.' )
+
 import pathlib
 import json
 import os
