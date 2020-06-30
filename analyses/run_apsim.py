@@ -29,7 +29,7 @@ def find_apsim (exe_path=None):
         return exe_path
 
 
-def run_sims (apsim, sims_path="apsim_files/Greene/*.apsim"):
+def run_sims (apsim, sims_path="apsim_files/Accola/*.apsim"):
     """Will execute Apsim.exe to run all .sim files in targeted folder.
     
     Arguments:
