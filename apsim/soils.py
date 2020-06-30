@@ -28,7 +28,9 @@ def get_depth_weighted_value( apsim_lyr, var, ssurgo_hrzns ):
     upper and lower APSIM layer depths."""
     apsim_top = apsim_lyr[ 'min' ]
     apsim_bttm = apsim_lyr[ 'max' ]
-    #find intersecting SSURGO layers and calculate fraction (weight) of APSIM layer
+
+    #find intersecting SSURGO layers and calculate fraction (weight)
+    #of APSIM layer
     vals = []
     wgts = []
     hrzns = ssurgo_hrzns.copy( deep = True )
@@ -70,10 +72,10 @@ def add_crop_xml( parent, crop_name, soil ):
     crop_elem.set( 'name', crop_name )
     add_subelements( crop_elem, 'Thickness' )
 
-    ad_eqn_1 = lambda df: df[ 'wfifteenbar_r' ] * 0.01
-    ad_eqn_2 = lambda df: ( df[ 'wfifteenbar_r' ] + 0.33 * ( df[ 'wthirdbar_r' ] - df[ 'wfifteenbar_r' ] ) ) * 0.01
-    ad_eqn_3 = lambda df: ( df[ 'wfifteenbar_r' ] + 0.66 * ( df[ 'wthirdbar_r' ] - df[ 'wfifteenbar_r' ] ) ) * 0.01
-    ad_eqn_4 = lambda df: df[ 'wthirdbar_r' ] * 0.01
+    ad_eqn_1 = lambda df: df[ 'LL15' ]
+    ad_eqn_2 = lambda df: df[ 'LL15' ] + 0.33 * ( df[ 'DUL' ] - df[ 'LL15' ] )
+    ad_eqn_3 = lambda df: df[ 'LL15' ] + 0.66 * ( df[ 'DUL' ] - df[ 'LL15' ] )
+    ad_eqn_4 = lambda df: df[ 'DUL' ]
 
     var_name = crop_name + '_LL'
     set_value_by_depth( soil.data, var_name, 0.0, 60.0, None, ad_eqn_1 )
@@ -158,50 +160,29 @@ def calculate_saxton_rawls( soil_df ):
     # LL15
     theta_1500t = ( -0.024 * S + 0.487 * C + 0.006 * OM + 0.005 * S * OM
         - 0.013 * C * OM + 0.068 * S * C + 0.031 )
-    soil_df[ 'sr_LL15'] = theta_1500t + ( 0.14 * theta_1500t - 0.02 )
+    soil_df[ 'LL15'] = theta_1500t + ( 0.14 * theta_1500t - 0.02 )
 
     # DUL
     theta_33t = ( -0.251 * S + 0.195 * C + 0.011 * OM + 0.006 * S * OM
         - 0.027 * C * OM + 0.452 * S * C + 0.299 )
-    soil_df[ 'sr_DUL' ] = theta_33t + (
+    soil_df[ 'DUL' ] = theta_33t + (
         1.283 * theta_33t**2 - 0.374 * theta_33t - 0.015 )
 
     # SAT
     theta_s33t = ( 0.278 * S + 0.034 * C + 0.022 * OM - 0.018 * S * OM
         - 0.027 * C * OM - 0.584 * S * C + 0.078 )
     theta_s33 = theta_s33t + ( 0.636 * theta_s33t - 0.107 )
-    soil_df[ 'sr_SAT' ] = soil_df[ 'sr_DUL' ] + theta_s33 - 0.097 * S + 0.043
+    soil_df[ 'SAT' ] = soil_df[ 'DUL' ] + theta_s33 - 0.097 * S + 0.043
 
     # BD
-    soil_df[ 'sr_BD' ] = ( 1 - soil_df[ 'sr_SAT' ] ) * 2.65
+    soil_df[ 'BD' ] = ( 1 - soil_df[ 'SAT' ] ) * 2.65
 
     # KS
     B = ( ( np.log( 1500 ) - np.log( 33 ) )/
-        ( np.log( soil_df[ 'sr_DUL' ] ) - np.log( soil_df[ 'sr_LL15' ] ) ) )
+        ( np.log( soil_df[ 'DUL' ] ) - np.log( soil_df[ 'LL15' ] ) ) )
     ks_lambda = 1/B
-    soil_df[ 'sr_KS' ] = ( 1930 * ( soil_df[ 'sr_SAT' ] -
-        soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda ) )
-
-    #air dry
-    # 0 - 15 cm: 0.01 * 0.5 * wfifteenbar_r
-    # 15 - 30 cm: 0.01 * 0.75 * wfifteenbar_r
-    # > 30 cm: 0.01 * wfifteenbar_r
-    ad_1 = lambda df: df[ 'sr_LL15'] * 0.5
-    ad_2 = lambda df: df[ 'sr_LL15'] * 0.75
-    ad_3 = lambda df: df[ 'sr_LL15']
-    set_value_by_depth( soil_df, 'sr_AirDry', 0.0, 15.0, None, ad_1 )
-    set_value_by_depth( soil_df, 'sr_AirDry', 15.0, 30.0, None, ad_2 )
-    set_value_by_depth( soil_df, 'sr_AirDry', 30.0, None, None, ad_3 )
-
-    # BD
-    soil_df[ 'sr_BD' ] = ( 1 - soil_df[ 'sr_SAT' ] ) * 2.65
-
-    # KS
-    B = ( ( np.log( 1500 ) - np.log( 33 ) )/
-        ( np.log( soil_df[ 'sr_DUL' ] ) - np.log( soil_df[ 'sr_LL15' ] ) ) )
-    ks_lambda = 1/B
-    soil_df[ 'sr_KS' ] = ( 1930 * ( soil_df[ 'sr_SAT' ]
-        - soil_df[ 'sr_LL15' ] )**( 3 - ks_lambda ) )
+    soil_df[ 'KS' ] = ( 1930 * ( soil_df[ 'SAT' ] -
+        soil_df[ 'LL15' ] )**( 3 - ks_lambda ) )
 
     return
 
@@ -359,16 +340,57 @@ class Soil:
         self.data = soil_df
         self.SWIM = SWIM
         self.SaxtonRawls = SaxtonRawls
+
+        #BD: bulk density (g/cm^3)
+        #LL15: soil lower limit (@ 15 bar; mm/mm)
+        #DUL: soil drained upper limit (@1/3 bar; mm/mm)
+        #SAT: saturated water holding capacity (mm/mm)
+        #KS: saturated hydraulic conductivity (mm/day)
+        #OC: soil organic carbon (%)
+        #PH: soil pH
+        #NO3: initial soil nitrate concentration (ppm)
+        #NH4: initial soil ammonium concentration (ppm)
+        #AirDry: air-dried water holding capacity (mm/mm)
+
         if SaxtonRawls:
             calculate_saxton_rawls( self.data )
+        else:
+            soil_df[ 'LL15'] = 0.01 * soil_df[ 'wfifteenbar_r' ]
+            soil_df[ 'DUL' ] = 0.01 * soil_df[ 'wthirdbar_r' ]
+            soil_df[ 'BD' ] = soil_df[ 'dbthirdbar_r' ]
+            soil_df[ 'KS' ] =  0.001 * 3600 * 24 * soil_df[ 'ksat_r' ]
+
+            #entrapped air %
+            soil_df.loc[
+                ( soil_df[ 'claytotal_r' ] >= 55 ),
+                'sat_e' ] = 0.03 #clay
+            soil_df.loc[
+                ( soil_df[ 'sandtotal_r' ] >= 85 ),
+                'sat_e' ] = 0.07 #sands
+            soil_df.loc[
+                ( soil_df[ 'claytotal_r' ] < 55 ) &
+                    ( soil_df[ 'sandtotal_r' ] < 85 ),
+                'sat_e' ] = 0.05 #loam
+            soil_df[ 'SAT' ] = ( 1 - ( soil_df[ 'dbthirdbar_r']/2.65 ) -
+                soil_df[ 'sat_e' ] )
+
+
+        #air dry
+        # 0 - 15 cm: 0.01 * 0.5 * wfifteenbar_r
+        # 15 - 30 cm: 0.01 * 0.75 * wfifteenbar_r
+        # > 30 cm: 0.01 * wfifteenbar_r
+        ad_1 = lambda df: df[ 'LL15' ] * 0.5
+        ad_2 = lambda df: df[ 'LL15' ] * 0.75
+        ad_3 = lambda df: df[ 'LL15' ]
+        set_value_by_depth( soil_df, 'AirDry', 0.0, 15.0, None, ad_1 )
+        set_value_by_depth( soil_df, 'AirDry', 15.0, 30.0, None, ad_2 )
+        set_value_by_depth( soil_df, 'AirDry', 30.0, None, None, ad_3 )
 
         #If using SWIM, update last two KS soil layers to be a 'hole' at
         #drainage depth with KS of 1.0 and 0.01, respectively.
         if SWIM:
             set_value_by_depth( soil_df, 'KS', 100.0, 150.0, 1.0, None )
             set_value_by_depth( soil_df, 'KS', 150.0, 200.0, 0.01, None )
-            set_value_by_depth( soil_df, 'sr_KS', 100.0, 150.0, 1.0, None )
-            set_value_by_depth( soil_df, 'sr_KS', 150.0, 200.0, 0.01, None )
 
         # fbiom = biom /(hum - inert_c)
         set_value_by_depth( soil_df, 'FBiom', 0.0, 15.0, 0.035, None)
@@ -386,43 +408,21 @@ class Soil:
         set_value_by_depth( soil_df, 'FInert', 90.0, 120.0, 0.80, None )
         set_value_by_depth( soil_df, 'FInert', 120.0, None, 0.90, None )
 
-        # air dry
-        # 0 - 15 cm: 0.01 * 0.5 * wfifteenbar_r
-        # 15 - 30 cm: 0.01 * 0.75 * wfifteenbar_r
-        # > 30 cm: 0.01 * wfifteenbar_r
-        ad_eqn_1 = lambda df: df[ 'wfifteenbar_r' ] * 0.01 * 0.5
-        ad_eqn_2 = lambda df: df[ 'wfifteenbar_r' ] * 0.01 * 0.8
-        ad_eqn_3 = lambda df: df[ 'wfifteenbar_r' ] * 0.01
-        set_value_by_depth( soil_df, 'AirDry', 0.0, 15.0, None, ad_eqn_1 )
-        set_value_by_depth( soil_df, 'AirDry', 15.0, 30.0, None, ad_eqn_2 )
-        set_value_by_depth( soil_df, 'AirDry', 30.0, None, None, ad_eqn_3 )
-
-        #entrapped air %
-        soil_df.loc[ ( soil_df[ 'claytotal_r' ] >= 55 ), 'sat_e' ] = 0.03 #clay
-        soil_df.loc[ ( soil_df[ 'sandtotal_r' ] >= 85 ), 'sat_e' ] = 0.07 #sands
-        soil_df.loc[ ( soil_df[ 'claytotal_r' ] < 55 ) &
-            ( soil_df[ 'sandtotal_r' ] < 85 ), 'sat_e' ] = 0.05 #loam
-
         #SWCON
-        soil_df.loc[ ( soil_df[ 'claytotal_r' ] >= 55 ), 'swcon' ] = 0.3
-        soil_df.loc[ ( soil_df[ 'sandtotal_r' ] >= 85 ), 'swcon' ] = 0.7
+        soil_df.loc[ ( soil_df[ 'claytotal_r' ] >= 55 ), 'SWCON' ] = 0.3
+        soil_df.loc[ ( soil_df[ 'sandtotal_r' ] >= 85 ), 'SWCON' ] = 0.7
         soil_df.loc[ ( soil_df[ 'claytotal_r' ] < 55 ) &
-            ( soil_df[ 'sandtotal_r' ] < 85 ), 'swcon' ] = 0.5
+            ( soil_df[ 'sandtotal_r' ] < 85 ), 'SWCON' ] = 0.5
 
-        #BD: bulk density
-        #LL15: soil lower limit
-        #DUL: soil drained upper limit
-        #SAT: saturated water holding capacity
-        #KS: saturated hydraulic conductivity
-        #OC: soil organic carbon
-        #PH: soil pH
-        #NO3: initial soil nitrate concentration
-        #NH4: initial soil ammonium concentration
-        #AirDry: air-dried water holding capacity
-
-        ### provide direct access to apsim properties
+        ### set direct access to apsim properties
         self.FBiom = soil_df[ 'FBiom' ]
         self.FInert = soil_df[ 'FInert' ]
+        self.LL15 = soil_df[ 'LL15' ]
+        self.BD = soil_df[ 'BD' ]
+        self.KS = soil_df[ 'KS' ]
+        self.DUL = soil_df[ 'DUL' ]
+        self.SAT = soil_df[ 'SAT' ]
+        self.AirDry = soil_df[ 'AirDry' ]
         self.OM = soil_df[ 'om_r' ]
         self.OC = soil_df[ 'om_r' ]/1.724
         self.PH = soil_df[ 'ph1to1h2o_r' ]
@@ -430,13 +430,13 @@ class Soil:
         self.NH4 = soil_df[ 'om_r' ]
         self.Clay = soil_df[ 'claytotal_r' ]
         self.Sand = soil_df[ 'sandtotal_r' ]
-        self.SWCON = soil_df[ 'swcon' ]
+        self.SWCON = soil_df[ 'SWCON' ]
 
-        if soil_df[ 'claytotal_r' ][0] >= 55:
+        if self.Clay[0] >= 55:
             self.DiffusConst = 40
             self.DiffusSlope = 16
             self.CN2Bare = 73
-        elif soil_df[ 'sandtotal_r' ][0] >= 85:
+        elif self.Sand[0] >= 85:
             self.DiffusConst = 250
             self.DiffusSlope = 22
             self.CN2Bare = 68
@@ -453,20 +453,6 @@ class Soil:
         self.Salb = 0.13
 
         self.Horizons = soil_df[ [ 'hzdept_r', 'hzdepb_r' ] ]
-        if SaxtonRawls:
-            self.BD = soil_df[ 'sr_BD' ]
-            self.LL15 = soil_df[ 'sr_LL15' ]
-            self.AirDry = soil_df[ 'sr_AirDry' ]
-            self.DUL = soil_df[ 'sr_DUL' ]
-            self.SAT = soil_df[ 'sr_SAT' ]
-            self.KS = soil_df[ 'sr_KS' ]
-        else:
-            self.BD = soil_df[ 'dbthirdbar_r' ]
-            self.LL15 = 0.01 * soil_df[ 'wfifteenbar_r' ]
-            self.DUL = 0.01 * soil_df[ 'wthirdbar_r' ]
-            self.KS = 0.001 * 3600 * 24 * soil_df[ 'ksat_r' ]
-            self.AirDry = soil_df[ 'AirDry' ]
-            self.SAT = 1 - ( soil_df[ 'dbthirdbar_r']/2.65 ) - soil_df[ 'sat_e' ]
 
     ###
     def soil_xml( self ):
