@@ -94,3 +94,47 @@ def get_rotation(df, crop_column):
     except Exception:
         print('Something went wrong')
         traceback.print_exc()
+
+'Converts multipolygon column to wkb'
+def wkb_hexer(line):
+    return line.wkb_hex
+
+#TODO munging that still needs implemented
+# For re-projecting input vector layer to raster projection
+def reproject(vector_gpd, raster):
+    proj = raster.crs.to_proj4()
+    print("Original vector layer projection: ", vector_gpd.crs)
+    reproj = vector_gpd.to_crs(proj)
+    print("New vector layer projection (PROJ4): ", reproj.crs)
+    return reproj
+#stats list: ['min', 'max', 'mean', 'count', 'sum', 'std', 'median', 'majority', 'minority', 'unique', 'range']
+
+def get_zonal_stats(vector, raster, stats):
+    # Run zonal statistics, store result in geopandas dataframe
+    result = zonal_stats(vector, raster, stats=stats, geojson_out=True)
+    geostats = gpd.GeoDataFrame.from_features(result)
+    return geostats
+    # For generating raster from zonal statistics result
+    
+def stats_to_raster(zdf, raster, stats, out_raster, no_data='y'):
+    meta = raster.meta.copy()
+    out_shape = raster.shape
+    transform = raster.transform
+    dtype = raster.dtypes[0]
+    field_list = list_columns(stats)
+    index = int(input("Rasterize by which field? "))
+    zone = zdf[field_list[index]]
+    shapes = ((geom,value) for geom, value in zip(zdf.geometry, zone))
+    burned = rasterize(shapes=shapes, fill=0, out_shape=out_shape, transform=transform)
+    show(burned)
+    meta.update(dtype=rio.float32, nodata=0)
+    # Optional to set nodata values to min of stat
+    if no_data == 'y':
+        cutoff = min(zone.values)
+        print("Setting nodata cutoff to: ", cutoff)
+        burned[burned < cutoff] = 0 
+    with rio.open(out_raster, 'w', **meta) as out:
+        out.write_band(1, burned)
+    print("Zonal Statistics Raster generated")
+
+
