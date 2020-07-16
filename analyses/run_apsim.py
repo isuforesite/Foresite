@@ -13,7 +13,7 @@ from multiprocessing import cpu_count
 from glob import glob
 from os import getcwd
 from tqdm import tqdm #progress bar
-from time import time
+from time import time, perf_counter
 from queue import Queue
 
 def find_apsim_exe():
@@ -80,7 +80,7 @@ def convert_all_apsim_to_sim(apsim_filename_list, num_cores=None):
     
     # add .apsim files to Queue
     q = Queue()
-    for apsim_filename in tqdm(apsim_filename_list):
+    for apsim_filename in apsim_filename_list:
         q.put_nowait(apsim_filename)
         
     # run .apsim files and start threads to convert
@@ -123,7 +123,7 @@ def run_many_sims(sim_filename_list, num_cores=None):
         num_cores = cpu_count() - 2
     # Add .sim files to Queue
     q = Queue()
-    for sim_filename in tqdm(sim_filename_list):
+    for sim_filename in sim_filename_list:
         q.put_nowait(sim_filename)
         
     # Run .sim files and start threads
@@ -156,6 +156,7 @@ def run_all_simulations (apsim_files_path="apsim_files\\Accola\\*.apsim", sim_fi
 
     #combine working dir and apsim file paths to create complete file paths
     wd = getcwd()
+    time1 = perf_counter()
     apsim_files = glob(apsim_files_path)
     complete_apsim_paths = [wd + f'\\{apsim_file}' for apsim_file in apsim_files]
     #convert list of .apsim files to .sim files
@@ -166,13 +167,17 @@ def run_all_simulations (apsim_files_path="apsim_files\\Accola\\*.apsim", sim_fi
     complete_sim_paths = [wd + f'\\{sim_file}' for sim_file in sim_files]
     #run .sim files
     run_many_sims(complete_sim_paths, num_cores=n_cores)
+    time2 = perf_counter()
+    print(f'Processing time: {time2 - time1:0.4f} seconds')
 
 def main():
     """
     Main function for when running script as standalone. Will run all .apsim files in directory.
     """
     try:
-        run_all_simulations()
+        run_all_simulations(apsim_files_path="apsim_files\\GreeneSaxton\\*.apsim", sim_files_path="apsim_files\\GreeneSaxton\\*.sim")
+
+        run_all_simulations(apsim_files_path="apsim_files\\GreeneDefault\\*.apsim", sim_files_path="apsim_files\\GreeneDefault\\*.sim")
     except Exception:
         traceback.print_exc()
 
