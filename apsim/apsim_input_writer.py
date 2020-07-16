@@ -241,7 +241,7 @@ def create_apsim_files(df, rotations_df, dbconn, field_key='clukey', soil_key='m
                 sim_count +=1
                 continue
 
-def create_mukey_county_runs(soils_list, dbconn, rotation, county_name, fips, start_year=2016, end_year=2018, swim = False, saxton=True, sfc_mgmt=None, cfs_mgt=None, cc_mgmt=None):
+def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name, fips, start_year=2016, end_year=2018, swim = False, saxton=True, sfc_mgmt=None, cfs_mgt=None, cc_mgmt=None):
     if not os.path.exists(f'apsim_files/{county_name}'):
         os.makedirs(f'apsim_files/{county_name}')
     start_date = f'01/01/{start_year}'
@@ -250,7 +250,8 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, county_name, fips, st
     #loop through field keys e.g., clukeys
     total_sims = len(soils_list)
     sim_count = 0
-    met_name = f"{county_name}.met"
+    if not os.path.exists(f'apsim_files/{county_name}/met_files'):
+        os.makedirs(f'apsim_files/{county_name}/met_files')
     met_path = f"met_files/{met_name}"
     for i in soils_list:
         try:
@@ -398,6 +399,8 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
     end_date = f'31/12/{end_year}'
     #save rotation for clukey to crops list
     #loop through field keys e.g., clukeys
+    if not os.path.exists(f'apsim_files/{field_name}/met_files'):
+        os.makedirs(f'apsim_files/{field_name}/met_files')
     met_path = f"met_files/{met_name}"
     total_sims = len(soils_list)
     sim_count = 0
@@ -542,10 +545,7 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
             continue
 
 if __name__ == "__main__":
-    soils_test_list = (1453495, 1453495)
-    create_mukey_county_runs(soils_test_list, dbconn, 'sfc', 'Greene', 'IA073')
-    create_mukey_county_runs(soils_test_list, dbconn, 'cc', 'Greene', 'IA073')
-    create_mukey_county_runs(soils_test_list, dbconn, 'cfs', 'Greene', 'IA073')
+    pass
 
 ################################################################################
 # create directories for dumping .apsim and .met files
