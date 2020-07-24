@@ -426,8 +426,8 @@ class Soil:
         self.OM = soil_df[ 'om_r' ]
         self.OC = soil_df[ 'om_r' ]/1.724
         self.PH = soil_df[ 'ph1to1h2o_r' ]
-        self.NO3 = soil_df[ 'om_r' ]
-        self.NH4 = soil_df[ 'om_r' ]
+        self.NO3 = soil_df[ 'om_r' ]/1.724
+        self.NH4 = soil_df[ 'om_r' ]/1.724
         self.Clay = soil_df[ 'claytotal_r' ]
         self.Sand = soil_df[ 'sandtotal_r' ]
         self.SWCON = soil_df[ 'SWCON' ]
