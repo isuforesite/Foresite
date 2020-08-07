@@ -170,14 +170,33 @@ def run_all_simulations (apsim_files_path="apsim_files\\Accola\\*.apsim", sim_fi
     time2 = perf_counter()
     print(f'Processing time: {time2 - time1:0.4f} seconds')
 
+# #TODO
+# with open(tmpFilename, 'w') as tmpFile:
+#         with open(sumFilename, 'w') as sumFile:
+#             subprocess.call([apsimExePath, simFilename], stdout=sumFile, stderr=tmpFile, startupinfo=startupinfo)
+#     with open(tmpFilename, 'r') as tmpFile:
+#         lineList = tmpFile.readlines()
+#         #print len(lineList)
+#         if '100%' in lineList[-1]:
+#             # delete .sim file after processing
+#             os.remove(simFilename)
+#             simRerunAttemps = 0
+#         elif simRerunAttemps < 5:
+#             # attempt to re-run sim file at most 5 times
+#             _run_sim(simFilename, lock)
+#             simRerunAttemps += 1
+#         else:
+#             print 'Unable to process file :', simFilename
+#             simRerunAttemps = 0
 def main():
     """
     Main function for when running script as standalone. Will run all .apsim files in directory.
     """
     try:
-        run_all_simulations(apsim_files_path="apsim_files\\GreeneSaxton\\*.apsim", sim_files_path="apsim_files\\GreeneSaxton\\*.sim")
-
-        run_all_simulations(apsim_files_path="apsim_files\\GreeneDefault\\*.apsim", sim_files_path="apsim_files\\GreeneDefault\\*.sim")
+        #run_all_simulations(apsim_files_path="apsim_files\\GreeneSaxton\\cfs\\*.apsim", sim_files_path="apsim_files\\GreeneSaxton\\cfs\\*.sim")
+        run_all_simulations(apsim_files_path="apsim_files\\GreeneDefault\\cc\\*.apsim", sim_files_path="apsim_files\\GreeneDefault\\cc\\*.sim")
+        run_all_simulations(apsim_files_path="apsim_files\\GreeneDefault\\cfs\\*.apsim", sim_files_path="apsim_files\\GreeneDefault\\cfs\\*.sim")
+        run_all_simulations(apsim_files_path="apsim_files\\GreeneDefault\\sfc\\*.apsim", sim_files_path="apsim_files\\GreeneDefault\\sfc\\*.sim")
     except Exception:
         traceback.print_exc()
 
