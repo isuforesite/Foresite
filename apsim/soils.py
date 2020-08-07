@@ -73,9 +73,9 @@ def add_crop_xml( parent, crop_name, soil ):
     add_subelements( crop_elem, 'Thickness' )
 
     ad_eqn_1 = lambda df: df[ 'LL15' ]
-    ad_eqn_2 = lambda df: df[ 'LL15' ] + 0.33 * ( df[ 'DUL' ] - df[ 'LL15' ] )
-    ad_eqn_3 = lambda df: df[ 'LL15' ] + 0.66 * ( df[ 'DUL' ] - df[ 'LL15' ] )
-    ad_eqn_4 = lambda df: df[ 'DUL' ]
+    ad_eqn_2 = lambda df: df[ 'LL15' ] + 0.1 * ( df[ 'DUL' ] - df[ 'LL15' ] )
+    ad_eqn_3 = lambda df: df[ 'LL15' ] + 0.2 * ( df[ 'DUL' ] - df[ 'LL15' ] )
+    ad_eqn_4 = lambda df: df[ 'LL15' ] + 0.3 * ( df[ 'DUL' ] - df[ 'LL15' ] )
 
     var_name = crop_name + '_LL'
     set_value_by_depth( soil.data, var_name, 0.0, 60.0, None, ad_eqn_1 )
