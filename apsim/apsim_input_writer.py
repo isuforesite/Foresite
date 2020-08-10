@@ -22,9 +22,9 @@ dbconn = apsim.connect_to_database( 'database.ini' )
 # input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
 
 # # constant spin up crops for multi-year rotation
-cfs_mgmt = json.loads( open( 'crop_jsons/cfs.json', 'r' ).read() )
-cc_mgmt = json.loads( open( 'crop_jsons/cc.json', 'r' ).read() )
-sfc_mgmt = json.loads( open( 'crop_jsons/sfc.json', 'r' ).read() )
+# cfs_mgmt = json.loads( open( 'crop_jsons/cfs.json', 'r' ).read() )
+# cc_mgmt = json.loads( open( 'crop_jsons/cc.json', 'r' ).read() )
+# sfc_mgmt = json.loads( open( 'crop_jsons/sfc.json', 'r' ).read() )
 
 ###
 def get_date( date_str, year ):
@@ -48,14 +48,15 @@ def add_management_year( man_ops, task, year ):
     primary_till_depth = task[ 'primary_tillage_depth' ]
     primary_till_incorp = task[ 'primary_tillage_residue_incorporation' ]
     primary_till_date = get_date( task[ 'primary_tillage_timing' ], year )
-    man_ops.add_primary_till_op( primary_till_date, primary_till_imp, primary_till_incorp, primary_till_depth )
+    #TODO try making this add_till_op and see what happens
+    man_ops.add_till_op( primary_till_date, primary_till_imp, primary_till_incorp, primary_till_depth )
 
     ###secondary tillage specs
     secondary_till_imp = task[ 'secondary_tillage_implement' ]
     secondary_till_depth = task[ 'secondary_tillage_depth' ]
     secondary_till_incorp = task[ 'secondary_tillage_residue_incorporation' ]
     secondary_till_date = get_date( task[ 'secondary_tillage_timing' ], year )
-    man_ops.add_secondary_till_op( secondary_till_date, secondary_till_imp, secondary_till_incorp, secondary_till_depth )
+    man_ops.add_till_op( secondary_till_date, secondary_till_imp, secondary_till_incorp, secondary_till_depth )
 
     ### fert specs
     n_rate = task[ 'kg_n_ha' ]

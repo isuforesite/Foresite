@@ -22,14 +22,7 @@ class OpManager:
         self.ops_xml.set( 'name', 'Operations Schedule' )
 
     ###
-    def add_primary_till_op( self, date, implement, f_incorp, tillage_depth):
-        op_elem = init_new_op( date )
-        action = ( f'SurfaceOrganicMatter tillage type = {str(implement)}, f_incorp = {f_incorp} (0-1), tillage_depth = {tillage_depth} (mm)' )
-        act_elem = SubElement( op_elem, 'action' )
-        act_elem.text = action
-        self.ops_xml.append( op_elem )
-    
-    def add_secondary_till_op( self, date, implement, f_incorp, tillage_depth):
+    def add_till_op( self, date, implement, f_incorp, tillage_depth):
         op_elem = init_new_op( date )
         action = ( f'SurfaceOrganicMatter tillage type = {str(implement)}, f_incorp = {f_incorp} (0-1), tillage_depth = {tillage_depth} (mm)' )
         act_elem = SubElement( op_elem, 'action' )
