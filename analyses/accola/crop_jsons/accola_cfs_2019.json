@@ -1,0 +1,22 @@
+{
+    "primary_tillage_implement": "user_defined",
+    "primary_tillage_depth": 57,
+    "primary_tillage_residue_incorporation": 0.25,
+    "primary_tillage_timing": "16-apr",
+    "secondary_tillage_implement": "user_defined",
+    "secondary_tillage_depth": 76,
+    "secondary_tillage_residue_incorporation": 0.20,
+    "secondary_tillage_timing": "23-apr",
+    "kg_n_ha": 168,
+    "fertilize_n_on": "21-apr",
+    "n_fertilizer": "uan_n",
+    "fert_depth": 50.0,
+    "sow_crop": "maize",
+    "cultivar": "B_105",
+    "planting_dates": "18-may",
+    "sowing_density": 8,
+    "sowing_depth": 51,
+    "row_spacing": 762,
+    "harvest": "maize",
+    "harvest_date": "15-oct"
+}

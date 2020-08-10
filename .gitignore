@@ -13,3 +13,6 @@ analyses/test_apsim_files
 setup.py
 budgets/database.py
 apsim/apsim_parser.ipynb
+analyses/accola/apsim_files
+analyses/ebilsland/apsim_files
+analyses/accola/database.py
