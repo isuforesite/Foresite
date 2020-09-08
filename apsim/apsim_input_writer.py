@@ -11,23 +11,17 @@ import io
 import json
 import apsim.wrapper as apsim
 
-# Connect to database
-dbconn = apsim.connect_to_database( 'database.ini' )
-
-# # query scenarios to generate inputs
-# SIM_NAME = 'huc12_test_job'
-# START_DATE = '01/01/2016'
-# END_DATE = '31/12/2018'
-# INPUT_QUERY = 'select * from sandbox.huc12_inputs limit 0'
-# input_tasks = pd.read_sql( INPUT_QUERY, dbconn )
-
-# # constant spin up crops for multi-year rotation
-# cfs_mgmt = json.loads( open( 'crop_jsons/cfs.json', 'r' ).read() )
-# cc_mgmt = json.loads( open( 'crop_jsons/cc.json', 'r' ).read() )
-# sfc_mgmt = json.loads( open( 'crop_jsons/sfc.json', 'r' ).read() )
-
 ###
 def get_date( date_str, year ):
+    """Formats mgmt json date value to dd/mm/yyyy
+
+    Args:
+        date_str (str): dict date string
+        year (str): year to add ops for
+
+    Returns:
+        [str]: reformatted date string
+    """
     month_ids = {
         'jan': 1, 'feb': 2, 'mar': 3,
         'apr': 4, 'may': 5, 'jun': 6,
@@ -41,47 +35,34 @@ def get_date( date_str, year ):
 
     return date
 
-###
-def add_management_year( man_ops, task, year ):
-    ### primary tillage specs
-    primary_till_imp = task[ 'primary_tillage_implement' ]
-    primary_till_depth = task[ 'primary_tillage_depth' ]
-    primary_till_incorp = task[ 'primary_tillage_residue_incorporation' ]
-    primary_till_date = get_date( task[ 'primary_tillage_timing' ], year )
-    #TODO try making this add_till_op and see what happens
-    man_ops.add_till_op( primary_till_date, primary_till_imp, primary_till_incorp, primary_till_depth )
 
-    ###secondary tillage specs
-    secondary_till_imp = task[ 'secondary_tillage_implement' ]
-    secondary_till_depth = task[ 'secondary_tillage_depth' ]
-    secondary_till_incorp = task[ 'secondary_tillage_residue_incorporation' ]
-    secondary_till_date = get_date( task[ 'secondary_tillage_timing' ], year )
-    man_ops.add_till_op( secondary_till_date, secondary_till_imp, secondary_till_incorp, secondary_till_depth )
+def get_rot_year_one(years):
+    return years[::2]
 
-    ### fert specs
-    n_rate = task[ 'kg_n_ha' ]
-    n_type = task[ 'n_fertilizer' ]
-    n_depth = task[ 'fert_depth' ]
-    if n_rate != None and n_rate > 0.0:
-        n_date = get_date( task[ 'fertilize_n_on' ], year )
-        man_ops.add_fert_op( n_date, n_rate, n_depth, n_type )
+def get_rot_year_two(years):
+    return years[1::2]
 
-    ### planting specs
-    crop = task[ 'sow_crop' ]
-    cult = task[ 'cultivar' ]
-    dens = task[ 'sowing_density' ]
-    depth = task[ 'sowing_depth' ]
-    space = task[ 'row_spacing' ]
-
-    plant_date = get_date( task[ 'planting_dates' ], year )
-    man_ops.add_plant_op( plant_date, crop, dens, depth, cult, space )
-
-    harvest_crop = crop
-    harvest_date = task['harvest_date']
-    harvest_date = get_date( harvest_date, year )
-    man_ops.add_harvest_op( harvest_date, harvest_crop )
-
-    return
+#Set all of the json keys to be parsed over
+#tillage keys
+tillage_implement_key = 'tillage_implement'
+tillage_depth_key = 'tillage_depth'
+tillage_f_incorp_key = 'tillage_residue_incorporation'
+tillage_date_key = 'tillage_timing'
+#fertilizer keys
+fert_amount_key = 'fert_kg_n_ha'
+fert_date_key = 'fert_fertilize_n_on'
+fert_formula_key = 'fert_n_fertilizer'
+fert_depth_key = 'fert_depth'
+#planting keys
+plant_crop_key = 'sow_crop'
+cultivar_key = 'cultivar'
+planting_date_key = 'planting_date'
+sowing_density_key = 'sowing_density'
+sowing_depth_key = 'sowing_depth'
+row_spacing_key = 'row_spacing'
+#harvest keys
+harvest_crop_key = 'harvest'
+harvest_date_key = 'harvest_date'
 
 #def create_input_table(dbconn, table, fip, start_year=2016, end_year=2018, id_col='fips', geo_col='wkb_geometry', name_col='county', soil_col="mukey", limit=False):
 def create_apsim_files(df, rotations_df, dbconn, field_key='clukey', soil_key='mukey', county_col='county', rotation_col='rotation', crop_col='crop', start_year=2016, end_year=2018):
@@ -242,17 +223,19 @@ def create_apsim_files(df, rotations_df, dbconn, field_key='clukey', soil_key='m
                 sim_count +=1
                 continue
 
-def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name, fips, start_year=2016, end_year=2018, swim = False, saxton=True, sfc_mgmt=None, cfs_mgt=None, cc_mgmt=None):
-    if not os.path.exists(f'apsim_files/{county_name}'):
-        os.makedirs(f'apsim_files/{county_name}')
+def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name, fips, start_year=2016, end_year=2018, swim = False, saxton=True, sfc_mgmt=None, cfs_mgmt=None, cc_mgmt=None):
+    runs_folder_path = f'apsim_files/{county_name}/{end_year}/{rotation}'
+    if not os.path.exists(runs_folder_path):
+        os.makedirs(runs_folder_path)
     start_date = f'01/01/{start_year}'
     end_date = f'31/12/{end_year}'
     #save rotation for clukey to crops list
     #loop through field keys e.g., clukeys
     total_sims = len(soils_list)
     sim_count = 0
-    if not os.path.exists(f'apsim_files/{county_name}/met_files'):
-        os.makedirs(f'apsim_files/{county_name}/met_files')
+    met_folder_path = f'apsim_files/{county_name}/{end_year}/{rotation}/met_files'
+    if not os.path.exists(met_folder_path):
+        os.makedirs(met_folder_path)
     met_path = f"met_files/{met_name}"
     for i in soils_list:
         try:
@@ -326,7 +309,27 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name
                 'surfaceom_c',
                 'subsurface_drain',
                 'subsurface_drain_no3',
-                'leach_no3' ]
+                'leach_no3',
+                'oc',
+                'nit_tot',
+                'swcon',
+                'sws',
+                'RUE',
+                'sw_demand',
+                'sw_supply',
+                'swdef_expan',
+                'swdef_pheno',
+                'swdef_photo',
+                'TotalTT',
+                'WaterSD',
+                'lai',
+                'sw_stress_expan',
+                'sw_stress_fixation',
+                'sw_stress_pheno',
+                'sw_stress_photo',
+                'sw_deficit',
+                'sw_demand',
+                'sw_supply' ]
             output_xml = apsim.set_output_variables( f'County_{county_name}_fips_{fips}_mukey_{soil_id}_rot_{rotation}_sim.out', outvars )
             area.append( output_xml )
             graph_no3 = [
@@ -351,9 +354,7 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name
                 'soy_buac',
                 'fertiliser',
                 'surfaceom_c',
-                'subsurface_drain',
-                'subsurface_drain_no3',
-                'leach_no3' 
+                'leach_no3'
             ]
 
             output_xml.append( apsim.add_xy_graph( 'Date', graph_no3, 'no3' ) )
@@ -362,23 +363,94 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name
 
             op_man = apsim.OpManager()
             op_man.add_empty_manager()
-            if rotation == 'cfs':
-                add_management_year(op_man, cfs_mgmt, start_year)
-                add_management_year(op_man, sfc_mgmt, start_year+1)
-                add_management_year(op_man, cfs_mgmt, end_year)
-            elif rotation == 'sfc':
-                add_management_year(op_man, sfc_mgmt, start_year)
-                add_management_year(op_man, cfs_mgmt, start_year+1)
-                add_management_year(op_man, sfc_mgmt, end_year)
-            elif rotation == 'cc':
-                add_management_year(op_man, cc_mgmt, start_year)
-                add_management_year(op_man, cc_mgmt, start_year+1)
-                add_management_year(op_man, cc_mgmt, end_year)
+            #get range of years for runs and keep each management year as a list
+            num_years = end_year - start_year
+            years_range = list(range(start_year, end_year+1))
+            rot_years_one = get_rot_year_one(years_range)
+            rot_years_two = get_rot_year_two(years_range)
+            rot_every_year = years_range[::1]
+            if num_years % 3 == 0:
+                if rotation == 'cfs':
+                    for i in rot_years_one:
+                        #--- add ops for soybean in year 1 ---#
+                        #add tillage operations
+                        sfc_tillage_df = apsim.man.create_tillage_df(sfc_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(sfc_tillage_df, op_man)
+                        #add planting operations
+                        sfc_planting_df = apsim.man.create_planting_df(sfc_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(sfc_planting_df, op_man)
+                        #add fert operations
+                        sfc_fert_df = apsim.man.create_fert_df(sfc_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(sfc_fert_df, op_man)
+                        #add harvest operations
+                        sfc_harvest_df = apsim.man.create_harvest_df(sfc_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(sfc_harvest_df, op_man)
+                    for i in rot_years_two:
+                        #--- add ops for corn in year 2 ---#
+                        #add tillage operations
+                        cfs_tillage_df = apsim.man.create_tillage_df(cfs_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(cfs_tillage_df, op_man)
+                        #add planting operations
+                        cfs_planting_df = apsim.man.create_planting_df(cfs_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(cfs_planting_df, op_man)
+                        #add fert operations
+                        cfs_fert_df = apsim.man.create_fert_df(cfs_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(cfs_fert_df, op_man)
+                        #add harvest operations
+                        cfs_harvest_df = apsim.man.create_harvest_df(cfs_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(cfs_harvest_df, op_man)
+                elif rotation == 'sfc':
+                    for i in rot_years_one:
+                        #--- add ops for corn in year 1 ---#
+                        #add tillage operations
+                        cfs_tillage_df = apsim.man.create_tillage_df(cfs_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(cfs_tillage_df, op_man)
+                        #add planting operations
+                        cfs_planting_df = apsim.man.create_planting_df(cfs_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(cfs_planting_df, op_man)
+                        #add fert operations
+                        cfs_fert_df = apsim.man.create_fert_df(cfs_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(cfs_fert_df, op_man)
+                        #add harvest operations
+                        cfs_harvest_df = apsim.man.create_harvest_df(cfs_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(cfs_harvest_df, op_man)
+                    for i in rot_years_two:
+                        #--- add ops for soybeans in year 2 ---#
+                        #add tillage operations
+                        sfc_tillage_df = apsim.man.create_tillage_df(sfc_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(sfc_tillage_df, op_man)
+                        #add planting operations
+                        sfc_planting_df = apsim.man.create_planting_df(sfc_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(sfc_planting_df, op_man)
+                        #add fert operations
+                        sfc_fert_df = apsim.man.create_fert_df(sfc_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(sfc_fert_df, op_man)
+                        #add harvest operations
+                        sfc_harvest_df = apsim.man.create_harvest_df(sfc_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(sfc_harvest_df, op_man)
+                elif rotation == 'cc':
+                    for i in rot_every_year:
+                        #--- add cc ops every year---#
+                        #add tillage operations
+                        cc_tillage_df = apsim.man.create_tillage_df(cc_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(cc_tillage_df, op_man)
+                        #add planting operations
+                        cc_planting_df = apsim.man.create_planting_df(cc_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(cc_planting_df, op_man)
+                        #add fert operations
+                        cc_fert_df = apsim.man.create_fert_df(cc_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(cc_fert_df, op_man)
+                        #add harvest operations
+                        cc_harvest_df = apsim.man.create_harvest_df(cc_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(cc_harvest_df, op_man)
+                else:
+                    continue
             else:
-                continue
+                print("The total number of simulation years should be divisble by 3.")
+                break
             
             area.append( op_man.man_xml )
-            outfile = f'apsim_files/{county_name}/{county_name}_{soil_id}_{rotation}.apsim'
+            outfile = f'{runs_folder_path}/{county_name}_{soil_id}_{rotation}.apsim'
             ### management data
             tree = ElementTree()
             tree._setroot( apsim_xml )
@@ -390,18 +462,21 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name
                 print('Finished! All files created!')
         except:
             print(f'File creation failed for APSIM run {sim_count} mukey {soil_id}')
+            traceback.print_exc()
             sim_count +=1
             continue
 
 def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field', start_year=2016, end_year=2018, sfc_mgmt=None, cfs_mgmt=None, cc_mgmt=None, swim = False, saxton=False):
-    if not os.path.exists(f'apsim_files/{field_name}'):
-        os.makedirs(f'apsim_files/{field_name}')
+    runs_folder_path = f'apsim_files/{field_name}/{end_year}/{rotation}'
+    if not os.path.exists(runs_folder_path):
+        os.makedirs(runs_folder_path)
     start_date = f'01/01/{start_year}'
     end_date = f'31/12/{end_year}'
     #save rotation for clukey to crops list
     #loop through field keys e.g., clukeys
-    if not os.path.exists(f'apsim_files/{field_name}/met_files'):
-        os.makedirs(f'apsim_files/{field_name}/met_files')
+    met_folder_path = f'apsim_files/{field_name}/{end_year}/{rotation}/met_files'
+    if not os.path.exists(met_folder_path):
+        os.makedirs(met_folder_path)
     met_path = f"met_files/{met_name}"
     total_sims = len(soils_list)
     sim_count = 0
@@ -475,9 +550,8 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                 'soy_buac',
                 'fertiliser',
                 'surfaceom_c',
-                'subsurface_drain',
-                'subsurface_drain_no3',
-                'leach_no3' ]
+                'leach_no3'
+                ]
             output_xml = apsim.set_output_variables( f'name_{field_name}_mukey_{soil_id}_rot_{rotation}_sim.out', outvars )
             area.append( output_xml )
             graph_no3 = [
@@ -504,7 +578,27 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                 'surfaceom_c',
                 'subsurface_drain',
                 'subsurface_drain_no3',
-                'leach_no3' 
+                'leach_no3',
+                'oc',
+                'nit_tot',
+                'swcon',
+                'sws',
+                'RUE',
+                'sw_demand',
+                'sw_supply',
+                'swdef_expan',
+                'swdef_pheno',
+                'swdef_photo',
+                'TotalTT',
+                'WaterSD',
+                'lai',
+                'sw_stress_expan',
+                'sw_stress_fixation',
+                'sw_stress_pheno',
+                'sw_stress_photo',
+                'sw_deficit',
+                'sw_demand',
+                'sw_supply'
             ]
 
             output_xml.append( apsim.add_xy_graph( 'Date', graph_no3, 'no3' ) )
@@ -513,23 +607,94 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
 
             op_man = apsim.OpManager()
             op_man.add_empty_manager()
-            if rotation == 'cfs':
-                add_management_year(op_man, cfs_mgmt, start_year)
-                add_management_year(op_man, sfc_mgmt, start_year+1)
-                add_management_year(op_man, cfs_mgmt, end_year)
-            elif rotation == 'sfc':
-                add_management_year(op_man, sfc_mgmt, start_year)
-                add_management_year(op_man, cfs_mgmt, start_year+1)
-                add_management_year(op_man, sfc_mgmt, end_year)
-            elif rotation == 'cc':
-                add_management_year(op_man, cc_mgmt, start_year)
-                add_management_year(op_man, cc_mgmt, start_year+1)
-                add_management_year(op_man, cc_mgmt, end_year)
+            #get range of years for runs and keep each management year as a list
+            num_years = end_year - start_year
+            years_range = list(range(start_year, end_year+1))
+            rot_years_one = get_rot_year_one(years_range)
+            rot_years_two = get_rot_year_two(years_range)
+            rot_every_year = years_range[::1]
+            if num_years % 3 == 0:
+                if rotation == 'cfs':
+                    for i in rot_years_one:
+                        #--- add ops for soybean in year 1 ---#
+                        #add tillage operations
+                        sfc_tillage_df = apsim.man.create_tillage_df(sfc_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(sfc_tillage_df, op_man)
+                        #add planting operations
+                        sfc_planting_df = apsim.man.create_planting_df(sfc_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(sfc_planting_df, op_man)
+                        #add fert operations
+                        sfc_fert_df = apsim.man.create_fert_df(sfc_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(sfc_fert_df, op_man)
+                        #add harvest operations
+                        sfc_harvest_df = apsim.man.create_harvest_df(sfc_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(sfc_harvest_df, op_man)
+                    for i in rot_years_two:
+                        #--- add ops for corn in year 2 ---#
+                        #add tillage operations
+                        cfs_tillage_df = apsim.man.create_tillage_df(cfs_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(cfs_tillage_df, op_man)
+                        #add planting operations
+                        cfs_planting_df = apsim.man.create_planting_df(cfs_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(cfs_planting_df, op_man)
+                        #add fert operations
+                        cfs_fert_df = apsim.man.create_fert_df(cfs_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(cfs_fert_df, op_man)
+                        #add harvest operations
+                        cfs_harvest_df = apsim.man.create_harvest_df(cfs_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(cfs_harvest_df, op_man)
+                elif rotation == 'sfc':
+                    for i in rot_years_one:
+                        #--- add ops for corn in year 1 ---#
+                        #add tillage operations
+                        cfs_tillage_df = apsim.man.create_tillage_df(cfs_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(cfs_tillage_df, op_man)
+                        #add planting operations
+                        cfs_planting_df = apsim.man.create_planting_df(cfs_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(cfs_planting_df, op_man)
+                        #add fert operations
+                        cfs_fert_df = apsim.man.create_fert_df(cfs_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(cfs_fert_df, op_man)
+                        #add harvest operations
+                        cfs_harvest_df = apsim.man.create_harvest_df(cfs_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(cfs_harvest_df, op_man)
+                    for i in rot_years_two:
+                        #--- add ops for soybeans in year 2 ---#
+                        #add tillage operations
+                        sfc_tillage_df = apsim.man.create_tillage_df(sfc_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(sfc_tillage_df, op_man)
+                        #add planting operations
+                        sfc_planting_df = apsim.man.create_planting_df(sfc_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(sfc_planting_df, op_man)
+                        #add fert operations
+                        sfc_fert_df = apsim.man.create_fert_df(sfc_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(sfc_fert_df, op_man)
+                        #add harvest operations
+                        sfc_harvest_df = apsim.man.create_harvest_df(sfc_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(sfc_harvest_df, op_man)
+                elif rotation == 'cc':
+                    for i in rot_every_year:
+                        #--- add cc ops every year---#
+                        #add tillage operations
+                        cc_tillage_df = apsim.man.create_tillage_df(cc_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
+                        apsim.man.add_tillage_ops(cc_tillage_df, op_man)
+                        #add planting operations
+                        cc_planting_df = apsim.man.create_planting_df(cc_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
+                        apsim.man.add_planting_ops(cc_planting_df, op_man)
+                        #add fert operations
+                        cc_fert_df = apsim.man.create_fert_df(cc_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
+                        apsim.man.add_fert_ops(cc_fert_df, op_man)
+                        #add harvest operations
+                        cc_harvest_df = apsim.man.create_harvest_df(cc_mgmt, harvest_crop_key, harvest_date_key, i)
+                        apsim.man.add_harvest_ops(cc_harvest_df, op_man)
+                else:
+                    continue
             else:
-                continue
-            
+                print("The total number of simulation years should be divisble by 3.")
+                break
+
             area.append( op_man.man_xml )
-            outfile = f'apsim_files/{field_name}/{field_name}_{soil_id}_{rotation}.apsim'
+            outfile = f'{runs_folder_path}/{field_name}_{soil_id}_{rotation}.apsim'
             ### management data
             tree = ElementTree()
             tree._setroot( apsim_xml )
@@ -547,127 +712,3 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
 
 if __name__ == "__main__":
     pass
-
-################################################################################
-# create directories for dumping .apsim and .met files
-# if not os.path.exists( 'apsim_files' ):
-#     os.makedirs( 'apsim_files' )
-# if not os.path.exists( 'apsim_files/met_files' ):
-#     os.makedirs( 'apsim_files/met_files' )
-
-# # loop of tasks
-# for idx,task in input_tasks.iterrows():
-#     uuid = str( task[ 'uuid' ] )
-#     mukey = task[ 'mukey' ]
-#     fips = task[ 'fips' ]
-#     lat = task[ 'wth_lat' ]
-#     lon = task[ 'wth_lon' ]
-
-#     print( 'Processing: ' + uuid )
-
-#     # get soils data
-#     soil_query = '''select * from
-#         api.get_soil_properties( array[{}]::text[] )'''.format( mukey )
-#     soil_df = pd.read_sql( soil_query, dbconn )
-#     if soil_df.empty:
-#         continue
-
-#     # generate .met files
-#     met_path = 'met_files/weather_{}.met'.format( fips )
-#     if not os.path.exists( 'apsim_files/' + met_path ):
-#         wth_obj = apsim.Weather().from_daymet( lat, lon, 1980, 2018 )
-#         wth_obj.write_met_file( 'apsim_files/{}'.format( met_path ) )
-
-#     # initialize .apsim xml
-#     apsim_xml = Element( 'folder' )
-#     apsim_xml.set( 'version', '36' )
-#     apsim_xml.set( 'creator', 'Apsim_Wrapper' )
-#     apsim_xml.set( 'name', 'S1' )
-#     sim = SubElement( apsim_xml, 'simulation' )
-#     sim.set( 'name', SIM_NAME )
-#     metfile = SubElement( sim, 'metfile' )
-#     metfile.set( 'name', 'foresite_weather' )
-#     filename = SubElement( metfile, 'filename' )
-#     filename.set( 'name', 'filename' )
-#     filename.set( 'input', 'yes' )
-#     filename.text = met_path
-#     clock = SubElement( sim, 'clock' )
-#     clock_start = SubElement( clock, 'start_date' )
-#     clock_start.set( 'type', 'date' )
-#     clock_start.set( 'description', 'Enter the start date of the simulation' )
-#     clock_start.text = START_DATE
-#     clock_end = SubElement( clock, 'end_date' )
-#     clock_end.set( 'type', 'date' )
-#     clock_end.set( 'description', 'Enter the end date of the simulation' )
-#     clock_end.text = END_DATE
-#     sumfile = SubElement( sim, 'summaryfile' )
-#     area = SubElement( sim, 'area' )
-#     area.set( 'name', 'paddock' )
-
-#     # add soil xml
-#     soil = apsim.Soil(
-#         soil_df,
-#         SWIM = False,
-#         SaxtonRawls = False )
-
-#     area.append( soil.soil_xml() )
-
-#     ### surface om
-#     surfom_xml = apsim.init_surfaceOM( 'maize', 'maize', 3500, 65, 0.0 )
-#     area.append( surfom_xml )
-
-#     ### fertilizer
-#     fert_xml = SubElement( area, 'fertiliser' )
-
-#     ### crops
-#     crop_xml = SubElement( area, 'maize' )
-#     crop_xml = SubElement( area, 'soybean' )
-#     crop_xml = SubElement( area, 'wheat' )
-
-#     ### output file
-#     outvars = [
-#         'dd/mm/yyyy as Date', 'day', 'year',
-#         'yield', 'biomass', 'fertiliser',
-#         'surfaceom_c', 'subsurface_drain',
-#         'subsurface_drain_no3', 'leach_no3',
-#         'corn_buac', 'soy_buac' ]
-#     output_xml = apsim.set_output_variables( uuid + '.out', outvars )
-#     area.append( output_xml )
-
-#     graph_no3 = [
-#         'Cumulative subsurface_drain',
-#         'Cumulative subsurface_drain_no3',
-#         'Cumulative leach_no3'
-#     ]
-#     graph_yield = [
-#         'yield',
-#         'biomass',
-#         'corn_buac'
-#     ]
-#     graph_all = [
-#         'yield', 'biomass', 'fertiliser',
-#         'surfaceom_c', 'Cumulative subsurface_drain',
-#         'Cumulative subsurface_drain_no3',
-#         'Cumulative leach_no3', 'corn_buac',
-#         'soy_buac'
-#     ]
-
-#     output_xml.append( apsim.add_xy_graph( 'Date', graph_no3, 'no3' ) )
-#     output_xml.append( apsim.add_xy_graph( 'Date', graph_yield, 'yield' ) )
-#     output_xml.append( apsim.add_xy_graph( 'Date', graph_all, 'all outputs' ) )
-
-#     op_man = apsim.OpManager()
-#     op_man.add_empty_manager()
-
-#     add_management_year( op_man, spin_up_corn, 2016 )
-#     add_management_year( op_man, spin_up_soybean, 2017 )
-#     add_management_year( op_man, task, 2018 )
-
-#     area.append( op_man.man_xml )
-
-#     outfile = 'apsim_files/{}.apsim'.format( uuid )
-#     print( outfile )
-#     ### management data
-#     tree = ElementTree()
-#     tree._setroot( apsim_xml )
-#     tree.write( outfile )
