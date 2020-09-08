@@ -9,6 +9,12 @@ analyses/apsim_files
 foresite.egg-info
 analyses/*.xlsx
 analyses/database.py
+analyses/strips/database.py
+analyses/strips/apsim_files
+analyses/accola/database.py
+analyses/ebilsland/database.py
+analyses/raccoon-watershed/database.py
+analyses/raccoon-watershed/apsim_files
 analyses/test_apsim_files
 setup.py
 budgets/database.py
