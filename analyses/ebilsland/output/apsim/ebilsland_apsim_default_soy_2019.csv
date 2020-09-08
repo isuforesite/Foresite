@@ -1,0 +1,7 @@
+title,field,mukey,rotation,year,soybean_yield,maize_yield,corn_buac,soy_buac,soybean_biomass,maize_biomass,fertiliser,surfaceom_c_init,surfaceom_c_end,leach_no3
+name_EbilslandDefault_mukey_2550285_rot_sfc_sim,EbilslandDefault,2550285,sfc,2019,3534.75366,0.0,0.0,60.53773,7387.10986,0.0,0.0,3933.40186,2876.97314,118.31691999999998
+name_EbilslandDefault_mukey_2765522_rot_sfc_sim,EbilslandDefault,2765522,sfc,2019,3599.92481,0.0,0.0,61.65388,7517.646,0.0,0.0,4061.56665,2931.43115,67.95033
+name_EbilslandDefault_mukey_2834849_rot_sfc_sim,EbilslandDefault,2834849,sfc,2019,3599.78857,0.0,0.0,61.65155,7517.50439,0.0,0.0,4027.91357,2929.90649,74.59351
+name_EbilslandDefault_mukey_2835012_rot_sfc_sim,EbilslandDefault,2835012,sfc,2019,3598.90283,0.0,0.0,61.63638,7516.58447,0.0,0.0,4009.7898,2929.08887,103.863
+name_EbilslandDefault_mukey_2835146_rot_sfc_sim,EbilslandDefault,2835146,sfc,2019,3599.92481,0.0,0.0,61.65388,7517.646,0.0,0.0,4044.7898,2929.55273,106.75616000000001
+name_EbilslandDefault_mukey_2922007_rot_sfc_sim,EbilslandDefault,2922007,sfc,2019,3599.03101,0.0,0.0,61.63858,7516.71728,0.0,0.0,4008.33984,2929.16919,78.19918

@@ -13,7 +13,7 @@
     "fert_depth": 50.0,
     "sow_crop": "maize",
     "cultivar": "B_110",
-    "planting_dates": "29-apr",
+    "planting_date": "29-apr",
     "sowing_density": 8,
     "sowing_depth": 51,
     "row_spacing": 762,

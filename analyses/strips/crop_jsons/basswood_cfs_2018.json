@@ -1,0 +1,18 @@
+{
+    "fert_kg_n_ha_1": 110,
+    "fert_fertilize_n_on_1": "22-mar",
+    "fert_n_fertilizer_1": "MAP",
+    "fert_depth_1": 50.0,
+    "fert_kg_n_ha_3": 151,
+    "fert_fertilize_n_on_3": "09-apr",
+    "fert_n_fertilizer_3": "NH4_N",
+    "fert_depth_3": 50.0,
+    "sow_crop": "maize",
+    "cultivar": "B_105",
+    "planting_date": "06-may",
+    "sowing_density": 7,
+    "sowing_depth": 51,
+    "row_spacing": 762,
+    "harvest": "maize",
+    "harvest_date": "06-nov"
+}
