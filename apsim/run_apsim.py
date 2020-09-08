@@ -104,7 +104,8 @@ def run_a_sim(sim_filename, lock):
         si.wShowWindow = 0 # SW_HIDE - hides cmd windows
         startupinfo = si
     with open(tmp_filename, 'w') as tmp_file:
-        subprocess.call([apsim_exe, sim_filename], stdout=tmp_file, stderr=tmp_file, startupinfo=startupinfo)
+        if subprocess.call([apsim_exe, sim_filename], stdout=tmp_file, stderr=tmp_file, startupinfo=startupinfo) == 0:
+            os.remove(tmp_file)
 
 
 def worker_sim(queue, lock):
