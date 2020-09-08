@@ -291,7 +291,7 @@ class Weather:
 def create_excel_met(lat, long, start_year, end_year, met_name):
     if not os.path.exists(f'apsim_files/{met_name}/met_files'):
         os.makedirs(f'apsim_files/{met_name}/met_files')
-    wth_obj = Weather().from_daymet(lat, long, 1980, 2019)
+    wth_obj = Weather().from_daymet(lat, long, start_year, end_year)
     wth_df = wth_obj.data
     tav = round(wth_df[ 'maxt' ].mean(), 1)
     amp = round(wth_df['maxt'].max(), 1)
