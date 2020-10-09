@@ -8,7 +8,7 @@ import glob
 import re
 #import apsim.database as db
 
-def parse_all_output_county(out_file_dir, year=2019): #, db_path, db_schema, db_table
+def parse_all_output_county(out_file_dir): #, year=2019), db_path, db_schema, db_table
     """Parses all .out files for a county, gets daily output and returns df for the given year.
     Arguments:
         out_file_dir {str} -- path to folder that contains .out files
@@ -56,16 +56,37 @@ def parse_all_output_county(out_file_dir, year=2019): #, db_path, db_schema, db_
             'soybean_biomass': 'float64',
             'maize_biomass': 'float64',
             'fertiliser': 'float64',
-            #'n2o_atm': 'float64',
             'surfaceom_c': 'float64',
             'subsurface_drain': 'float64',
             'subsurface_drain_no3': 'float64',
             'leach_no3': 'float64',
             'corn_buac' : 'float64',
-            'soy_buac' : 'float64'
+            'soy_buac' : 'float64',
+            'oc' : 'float64',
+            'nit_tot' : 'float64',
+            'swcon' : 'float64',
+            'sws' : 'float64',
+            'RUE' : 'float64',
+            'sw_demand' : 'float64',
+            'sw_supply' : 'float64',
+            'swdef_expan' : 'float64',
+            'swdef_pheno' : 'float64',
+            'swdef_photo' : 'float64',
+            'TotalTT' : 'float64',
+            'WaterSD' : 'float64',
+            'lai' : 'float64',
+            'sw_stress_expan' : 'float64',
+            'sw_stress_fixation' : 'float64',
+            'sw_stress_pheno' : 'float64',
+            'sw_stress_photo' : 'float64',
+            'sw_deficit' : 'float64',
+            'sw_demand' : 'float64',
+            'sw_supply' : 'float64'
+            
             } )
-        df_year = daily_df.loc[daily_df['year'] == year].reset_index(drop=True)
-        push_df = push_df.append(df_year)
+        #df_year = daily_df.loc[daily_df['year'] == year].reset_index(drop=True)
+        #push_df = push_df.append(df_year)
+        push_df = push_df.append(daily_df)
     return push_df
     # push_df.to_sql(
     #     name = db_table,
