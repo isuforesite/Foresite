@@ -1,0 +1,22 @@
+{
+    "primary_tillage_implement": "user_defined",
+    "primary_tillage_depth": 88,
+    "primary_tillage_residue_incorporation": 0.25,
+    "primary_tillage_timing": "28-apr",
+    "secondary_tillage_implement": "user_defined",
+    "secondary_tillage_depth": 75.80,
+    "secondary_tillage_residue_incorporation": 0.33,
+    "secondary_tillage_timing": "16-may",
+    "kg_n_ha": 2.8,
+    "fertilize_n_on": "15-may",
+    "n_fertilizer": "nh4so4_n",
+    "fert_depth": 0.0,
+    "sow_crop": "soybean",
+    "cultivar": "MG_2",
+    "planting_dates": "18-may",
+    "sowing_density": 34,
+    "sowing_depth": 51,
+    "row_spacing": 762,
+    "harvest": "soybean",
+    "harvest_date": "24-sep"
+}

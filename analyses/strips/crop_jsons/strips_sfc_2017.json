@@ -1,0 +1,10 @@
+{
+    "sow_crop": "soybean",
+    "cultivar": "MG_2",
+    "planting_date": "06-may",
+    "sowing_density": 41,
+    "sowing_depth": 51,
+    "row_spacing": 254,
+    "harvest": "soybean",
+    "harvest_date": "15-oct"
+}
