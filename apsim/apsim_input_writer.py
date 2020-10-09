@@ -579,8 +579,6 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                 'subsurface_drain',
                 'subsurface_drain_no3',
                 'leach_no3',
-                'oc',
-                'nit_tot',
                 'swcon',
                 'sws',
                 'RUE',
@@ -709,6 +707,38 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
             traceback.print_exc()
             sim_count +=1
             continue
+
+def create_and_run_strips_apsim_files(field_name, mukeys, rotation, met_name, year_list, sfc_mgmt=None, cfs_mgmt=None):
+    for i in year_list:
+        end_year = i
+        start_year = end_year - 3
+        prior_year = end_year - 1
+        if rotation == 'sfc':
+            sfc_mgmt = json.loads( open( f'crop_jsons/strips_sfc_{end_year}.json', 'r' ).read() )
+            cfs_mgmt = json.loads( open( f'crop_jsons/strips_cfs_{prior_year}.json', 'r' ).read() )
+            create_mukey_runs(mukeys, dbconn, 'sfc', f'{met_name}.met', f'{field_name}Default', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt)
+            create_mukey_runs(mukeys, dbconn, 'sfc', f'{met_name}.met', f'{field_name}Saxton', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt, saxton=True)
+            original = f'met_files/{met_name}.met'
+            target = f'apsim_files/{field_name}Default/{end_year}/sfc/met_files/{met_name}.met'
+            shutil.copyfile(original, target)
+            target = f'apsim_files/{field_name}Saxton/{end_year}/sfc/met_files/{met_name}.met'
+            shutil.copyfile(original, target)
+            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\sfc\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\sfc\\*.sim")
+            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\sfc\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\sfc\\*.sim")
+        elif rotation == 'cfs':
+            sfc_mgmt = json.loads( open( f'crop_jsons/strips_sfc_{prior_year}.json', 'r' ).read() )
+            cfs_mgmt = json.loads( open( f'crop_jsons/strips_cfs_{end_year}.json', 'r' ).read() )
+            create_mukey_runs(mukeys, dbconn, 'cfs', f'{met_name}.met', f'{field_name}Default', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt)
+            create_mukey_runs(mukeys, dbconn, 'cfs', f'{met_name}.met', f'{field_name}Saxton', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt, saxton=True)
+            original = f'met_files/{met_name}.met'
+            target = f'apsim_files/{field_name}Default/{end_year}/cfs/met_files/{met_name}.met'
+            shutil.copyfile(original, target)
+            target = f'apsim_files/{field_name}Saxton/{end_year}/cfs/met_files/{met_name}.met'
+            shutil.copyfile(original, target)
+            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\cfs\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\cfs\\*.sim")
+            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\cfs\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\cfs\\*.sim")
+        else:
+            print("That rotation is not currently set up")
 
 if __name__ == "__main__":
     pass
