@@ -1,8 +1,105 @@
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import database as db
 import traceback
+
+#these are just reference for when months end and start in cleaned met csv, including shift for leap years
+month_start_end = [
+    {'apr_s':91, 'apr_e':120},
+    {'may_s':121, 'may_e':151},
+    {'jun_s':152, 'jun_e':181},
+    {'jul_s':182, 'jul_e':212},
+    {'aug_s':213, 'aug_e':243},
+    {'sep_s':244, 'sep_e':273}]
+
+month_start_end_leap = [
+    {'apr_s':92, 'apr_e':121},
+    {'may_s':122, 'may_e':152},
+    {'jun_s':153, 'jun_e':182},
+    {'jul_s':183, 'jul_e':213},
+    {'aug_s':214, 'aug_e':244},
+    {'sep_s':245, 'sep_e':274}]
+
+def sum_met_season_col(weather_csv, year, col_index=5):
+    """Sums met variable/column for a given year's growing season.
+    (growing season = Apr, May, Jun, Jul, Aug, Sep)
+
+    Args:
+        weather_csv (.csv): csv file containing weather data
+        year (int): year to obtain precipitation data for
+        col_indedx (int): index for df column to sum (default 5 = precip)
+    Returns:
+        [list]: list of cumulative monthly precip
+    """
+    leap_years = [ yr for yr in range( 1980, 2040, 4 ) ]
+    if year in leap_years:
+        slices = (92, 121, 122, 152, 153, 182, 183, 213, 214, 244, 245, 274)
+    else:
+        slices = (91, 120, 121, 151, 152, 181, 182, 212, 213, 243, 244, 273)
+    df = pd.read_csv(weather_csv)
+    year_df = df.loc[df['year'] == year].reset_index(drop=True)
+    #get values between desired sclices for precip column
+    apr_sum = sum(year_df.iloc[slices[0]:slices[1], col_index])
+    may_sum = sum(year_df.iloc[slices[2]:slices[3], col_index])
+    jun_sum = sum(year_df.iloc[slices[4]:slices[5], col_index])
+    jul_sum = sum(year_df.iloc[slices[6]:slices[7], col_index])
+    aug_sum = sum(year_df.iloc[slices[8]:slices[9], col_index])
+    sep_sum = sum(year_df.iloc[slices[10]:slices[11], col_index])
+    month_sums = (apr_sum, may_sum, jun_sum, jul_sum, aug_sum, sep_sum)
+    return month_sums
+
+def create_summed_met_df (weather_csv, years, col_index):
+    """Creates a new pd.df with growing season years as col and months Apr-Sep as rows
+    for the summed met variable of interest (eg precip).
+
+    Args:
+        weather_csv (str): path to met file csv
+        years (list): list of years to analyze
+        col_index (int): index of the variable of interest (eg 5 = precip)
+    Returns:
+        [pd.df]: dataframe with each column being the year and rows being months Apr to Sep
+    """
+    df = pd.DataFrame()
+    for i in years:
+        met_sum_list = sum_met_season_col(weather_csv, i, col_index)
+        df[f'{i}'] = met_sum_list
+    return df
+
+def chart_met_growing_seasons(df, field_name, met_var, var_units, years, plot_style, fig_width=10, fig_height=12, ylim=350, cols=2):
+    """Creates bar charts of met variable for N seasons/years.
+
+    Args:
+        df (pd.df): dataframe with years as columns
+        field_name (str): name of field met file is for
+        met_var (str): the variable the df has data for (eg, Precipitation)
+        var_units (str): the units the variable is in (eg, mm)
+        years (dict): dict containing the years to chart from the df
+        plot_style (str): matplotlib style to use
+        fig_width (int, optional): [width of figure in inches]. Defaults to 10.
+        fig_height (int, optional): [height of figure in inches]. Defaults to 12.
+
+    Returns:
+        matplotlib Figure with subplots for each year.
+    """
+    x = ('Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep')
+    tot = len(years)
+    tot_range = range(tot)
+    rows = tot // cols 
+    rows += tot % cols
+    position = range(1,tot + 1)
+    fig = plt.figure(1, figsize=(fig_width, fig_height))
+    for (i, k) in zip(years, tot_range):
+        y = df[f'{i}']
+        # add every single subplot to the figure with a for loop
+        ax = fig.add_subplot(rows,cols,position[k])
+        ax.set_ylim(0,ylim)
+        ax.bar(x,y)
+        ax.set(title=f'{i}', ylabel=met_var)
+    fig.suptitle(f'{field_name} Monthly {met_var} ({var_units})', fontsize=14, fontweight='bold', y=1.02)
+    fig.tight_layout()
+    plt.show()
 
 '''
 Returns a list of all unique entries in a database column.
