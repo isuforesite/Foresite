@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import database as db
+import rasterio as rio
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 import traceback
 
 #these are just reference for when months end and start in cleaned met csv, including shift for leap years
@@ -198,13 +200,38 @@ def wkb_hexer(line):
 
 #TODO munging that still needs implemented
 # For re-projecting input vector layer to raster projection
-def reproject(vector_gpd, raster):
+def reproject_vector(vector_gpd, raster):
     proj = raster.crs.to_proj4()
     print("Original vector layer projection: ", vector_gpd.crs)
     reproj = vector_gpd.to_crs(proj)
     print("New vector layer projection (PROJ4): ", reproj.crs)
     return reproj
 #stats list: ['min', 'max', 'mean', 'count', 'sum', 'std', 'median', 'majority', 'minority', 'unique', 'range']
+
+def reproject_raster(inpath, outpath, new_crs):
+    dst_crs = new_crs # CRS for web meractor 
+
+    with rio.open(inpath) as src:
+        transform, width, height = calculate_default_transform(
+            src.crs, dst_crs, src.width, src.height, *src.bounds)
+        kwargs = src.meta.copy()
+        kwargs.update({
+            'crs': dst_crs,
+            'transform': transform,
+            'width': width,
+            'height': height
+        })
+
+        with rio.open(outpath, 'w', **kwargs) as dst:
+            for i in range(1, src.count + 1):
+                reproject(
+                    source=rio.band(src, i),
+                    destination=rio.band(dst, i),
+                    src_transform=src.transform,
+                    src_crs=src.crs,
+                    dst_transform=transform,
+                    dst_crs=dst_crs,
+                    resampling=Resampling.nearest)
 
 def get_zonal_stats(vector, raster, stats):
     # Run zonal statistics, store result in geopandas dataframe
@@ -234,4 +261,26 @@ def stats_to_raster(zdf, raster, stats, out_raster, no_data='y'):
         out.write_band(1, burned)
     print("Zonal Statistics Raster generated")
 
+def get_top_precip_days(df, year, year_col, day_col, precip_col):
+    df = df.loc[df[year_col] == year]
+    df = df.nlargest(10, [precip_col])
+    df_days = df[day_col]
+    df_days = sorted(df_days)
+    days_list = []
+    for x, y in zip(df_days[0::], df_days[1::]): 
+        if y - x == 1:
+            days_list.append([x, y])
+    #unique_days_list = unique_days(days_list)
+    return days_list
 
+def get_top_precip_values(df, days_list, year, day_col, precip_col):
+    df = df.loc[df['year'] == year]
+    major_precip_amounts = []
+    for i in days_list:
+        day1 = df.loc[df[day_col] == i[0]]
+        day1_precip = day1.iloc[0][precip_col]
+        day2 = df.loc[df[day_col] == i[1]]
+        day2_precip = day2.iloc[0][precip_col]
+        total_precip = day1_precip + day2_precip
+        major_precip_amounts.append([i[0], i[1], total_precip])
+    return major_precip_amounts
