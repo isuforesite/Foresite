@@ -103,31 +103,31 @@ def chart_met_growing_seasons(df, field_name, met_var, var_units, years, plot_st
     fig.tight_layout()
     plt.show()
 
-'''
-Returns a list of all unique entries in a database column.
-Args:
-    dbconn {database connection} -- connection to postgresql database
-    table {str} -- table name
-    id_column (str) -- column of interest.
-Returns:
-    list of all unique entries in a table column
-'''
 def get_distinct(dbconn, table, id_column):
+    '''
+    Returns a list of all unique entries in a database column.
+    Args:
+        dbconn {database connection} -- connection to postgresql database
+        table {str} -- table name
+        id_column (str) -- column of interest.
+    Returns:
+        list of all unique entries in a table column
+    '''
     entries = pd.read_sql(f'SELECT DISTINCT {id_column} FROM {table};', dbconn)
     entries = entries[id_column].tolist()
     return entries
 
-'''
-Get info for a county of interest from a geopandas df
-Args:
-    dbconn {database connection} -- connection to postgresql database
-    table {str} -- name of geopd table
-    fips {str} -- fips id of the desired county eg. 'IA021'
-    geom {str} -- column name that contains shape geometry
-Returns:
-    geopandas dataframe with county info
-'''
 def get_county(dbconn, table, fips, geom, limit=False, limit_num=100):
+    '''
+    Get info for a county of interest from a geopandas df
+    Args:
+        dbconn {database connection} -- connection to postgresql database
+        table {str} -- name of geopd table
+        fips {str} -- fips id of the desired county eg. 'IA021'
+        geom {str} -- column name that contains shape geometry
+    Returns:
+        geopandas dataframe with county info
+    '''
     #Get watershed as geopandas df
     if limit:
         query = f'SELECT * FROM {table} WHERE fips = \'{fips}\' LIMIT {limit_num};'
@@ -136,17 +136,18 @@ def get_county(dbconn, table, fips, geom, limit=False, limit_num=100):
     county_gpd = gpd.read_postgis(query, dbconn, geom_col=geom)
     return county_gpd
 
-'''
-Find and return the centroid of a geopandas geometry
-Args: 
-    geodf {dataframe} -- geopandas dataframe
-    id {string} -- the id of interest in the geodf (e.g., 'fips' for county column)
-    geometry (string) - geopd column with geometries
 
-Returns:
-    {np.array} -- lat and longitude of geometry
-'''
 def get_centroid(geodf, id, geometry):
+    '''
+    Find and return the centroid of a geopandas geometry
+    Args: 
+        geodf {dataframe} -- geopandas dataframe
+        id {string} -- the id of interest in the geodf (e.g., 'fips' for county column)
+        geometry (string) - geopd column with geometries
+
+    Returns:
+        {np.array} -- lat and longitude of geometry
+    '''
     #get the geometry of interest by id - 'fips' for a county
     geom = geodf[[id, geometry]]
     #dissolve geometries to make one big geometry
@@ -158,15 +159,16 @@ def get_centroid(geodf, id, geometry):
     centroid_coords = np.array([coords[0][1], coords[0][0]])
     return centroid_coords
 
-"""
-Get the crop rotation for each clukey.
-Args:
-    df {obj} -- Dataframe that contains individual clukey information.
-    crop_column {str} -- Column name that contains the label for what crop is growing for a given year.
-Returns:
-    Str of the rotation. e.g., 'cs' = corn-soy
-"""
+
 def get_rotation(df, crop_column):
+    """
+    Get the crop rotation for each clukey.
+    Args:
+        df {obj} -- Dataframe that contains individual clukey information.
+        crop_column {str} -- Column name that contains the label for what crop is growing for a given year.
+    Returns:
+        Str of the rotation. e.g., 'cs' = corn-soy
+    """
     #save rotation for clukey to crops list
     try:
         df = df.sort_values(by=['years'], ascending=True)
@@ -194,8 +196,9 @@ def get_rotation(df, crop_column):
         print('Something went wrong')
         traceback.print_exc()
 
-'Converts multipolygon column to wkb'
+
 def wkb_hexer(line):
+    'Converts multipolygon column in gpd to wkb'
     return line.wkb_hex
 
 #TODO munging that still needs implemented
@@ -261,20 +264,57 @@ def stats_to_raster(zdf, raster, stats, out_raster, no_data='y'):
         out.write_band(1, burned)
     print("Zonal Statistics Raster generated")
 
-def get_top_precip_days(df, year, year_col, day_col, precip_col):
+def get_top_ten_days(df, year, year_col, precip_col):
+    """Gets top 10 precipitation events from pandas df (met csv).
+
+    Args:
+        df (pd df): Pandas df read from met csv
+        year (int): Year of weather to get top events for
+        year_col (str): Years column label.
+        precip_col (str): Precip values column label.
+
+    Returns:
+        [pd df]: Dataframe with top 10 precip events.
+    """
     df = df.loc[df[year_col] == year]
     df = df.nlargest(10, [precip_col])
+    return df
+
+def check_adjacent_days(df, day_col, precip_col):
+    """Checks for any days in the top 10 precip events df
+    that are adjacent to one another. eg., day 110 and day 111
+
+    Args:
+        df (pd df): Data frame of top precip events
+        day_col (str): Days column label.
+        precip_col ([type]): [description]
+
+    Returns:
+        [list]: List of lists with days that are adjacent to one another
+        eg., [[155,156],[201,202]]
+    """
     df_days = df[day_col]
     df_days = sorted(df_days)
-    days_list = []
+    adjacent_days = []
     for x, y in zip(df_days[0::], df_days[1::]): 
         if y - x == 1:
-            days_list.append([x, y])
-    #unique_days_list = unique_days(days_list)
-    return days_list
+            adjacent_days.append([x, y])
+    return adjacent_days
 
-def get_top_precip_values(df, days_list, year, day_col, precip_col):
-    df = df.loc[df['year'] == year]
+def sum_adjacent_days(df, days_list, day_col, precip_col):
+    """Sums precip events for any adjacent days.
+    eg., day 155 had 60mm and day 156 had 40mm, returns 100mm
+
+    Args:
+        df (pd df): Data frame witht op 10 precip events.
+        days_list (list): List of lists containing any adjacent days.
+        day_col (str): Df column label with day integers.
+        precip_col (str): Df column label with precip values
+
+    Returns:
+        [list]: Returns a list of lists containing the adjacent days and
+        the summed precip for the days. eg., [[day, day, precip]]; [[155, 156, 97]]
+    """
     major_precip_amounts = []
     for i in days_list:
         day1 = df.loc[df[day_col] == i[0]]
@@ -284,3 +324,43 @@ def get_top_precip_values(df, days_list, year, day_col, precip_col):
         total_precip = day1_precip + day2_precip
         major_precip_amounts.append([i[0], i[1], total_precip])
     return major_precip_amounts
+
+def get_top2_precip_events(df, days_list, day_col, precip_col):
+    """Returns the values for the top 2 precip events in a df based on
+    if the precip events are adjacent or not.
+
+    Args:
+        df (pd df): Data frame with top precip events.
+        days_list (list): List of adjacent days to check.
+        day_col (str): Label of day col in pd df.
+        precip_col ([type]): Label of precip col in pd df.
+
+    Returns:
+        [list]: List of the top 2 precip events.
+    """
+    if len(days_list) == 1:
+        print('one adjacent day of precipitation')
+        event1 = sum_adjacent_days(df, days_list, day_col, precip_col)
+        event1_precip = event1[0][2]
+        df = df[df.day != event1[0][0]]
+        df = df[df.day != event1[0][1]]
+        df = df.sort_values(precip_col, ascending=False)
+        event2_precip = df[precip_col].iloc[0]
+        precip_events = [event1_precip, event2_precip]
+    elif len(days_list) >= 2:
+        print('more than one adjacent day of precipitation')
+        events = sum_adjacent_days(df, days_list, day_col, precip_col)
+        precip_values = []
+        for i in events:
+            precip_values.append(i[2])
+        precip_values.sort(reverse=True)
+        event1_precip = precip_values[0]
+        event2_precip = precip_values[1]
+        precip_events = [event1_precip, event2_precip]
+    else:
+        print('no adjacent days of precipitation')
+        df = df.sort_values(precip_col, ascending=False)
+        event1_precip = df[precip_col].iloc[0]
+        event2_precip = df[precip_col].iloc[1]
+        precip_events = [event1_precip, event2_precip]
+    return precip_events 
