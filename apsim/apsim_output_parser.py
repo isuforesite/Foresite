@@ -216,7 +216,7 @@ def parse_all_output_field(out_file_dir, year=2019): #, db_path, db_schema, db_t
         daily_df = daily_df.reset_index( drop = True )
         #replace all ? with NaN
         daily_df = daily_df.replace("?", np.nan)
-        daily_df['date'] = pd.to_datetime(daily_df['date']).dt.date
+        del daily_df['date']
 
         # cast explicit data types for processing
         daily_df = daily_df.astype( {
@@ -232,8 +232,8 @@ def parse_all_output_field(out_file_dir, year=2019): #, db_path, db_schema, db_t
             'fertiliser': 'float64',
             #'n2o_atm': 'float64',
             'surfaceom_c': 'float64',
-            'subsurface_drain': 'float64',
-            'subsurface_drain_no3': 'float64',
+            # 'subsurface_drain': 'float64',
+            # 'subsurface_drain_no3': 'float64',
             'leach_no3': 'float64',
             'corn_buac' : 'float64',
             'soy_buac' : 'float64'
@@ -279,8 +279,8 @@ def parse_summary_output_field(out_file_dir, year=2019): #, db_path, db_schema, 
         #drop first row that has unit names
         #replace all ? with NaN
         daily_df = daily_df.replace("?", np.nan)
-        daily_df['date'] = pd.to_datetime(daily_df['date']).dt.date
-
+        del daily_df['date']
+        
         # cast explicit data types for processing
         daily_df = daily_df.astype( {
             'title' : 'string',
@@ -296,8 +296,8 @@ def parse_summary_output_field(out_file_dir, year=2019): #, db_path, db_schema, 
             'fertiliser': 'float64',
             #'n2o_atm': 'float64',
             'surfaceom_c': 'float64',
-            'subsurface_drain': 'float64',
-            'subsurface_drain_no3': 'float64',
+            # 'subsurface_drain': 'float64',
+            # 'subsurface_drain_no3': 'float64',
             'leach_no3': 'float64',
             'corn_buac' : 'float64',
             'soy_buac' : 'float64'
