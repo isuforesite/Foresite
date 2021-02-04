@@ -2,106 +2,22 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import json
+import os
+import fnmatch
+from glob import glob
 import database as db
 import rasterio as rio
+import rasterstats as rs
 from rasterio.warp import calculate_default_transform, reproject, Resampling
+from apsim.apsim_output_parser import parse_summary_output_field
 import traceback
 
-#these are just reference for when months end and start in cleaned met csv, including shift for leap years
-month_start_end = [
-    {'apr_s':91, 'apr_e':120},
-    {'may_s':121, 'may_e':151},
-    {'jun_s':152, 'jun_e':181},
-    {'jul_s':182, 'jul_e':212},
-    {'aug_s':213, 'aug_e':243},
-    {'sep_s':244, 'sep_e':273}]
 
-month_start_end_leap = [
-    {'apr_s':92, 'apr_e':121},
-    {'may_s':122, 'may_e':152},
-    {'jun_s':153, 'jun_e':182},
-    {'jul_s':183, 'jul_e':213},
-    {'aug_s':214, 'aug_e':244},
-    {'sep_s':245, 'sep_e':274}]
 
-def sum_met_season_col(weather_csv, year, col_index=5):
-    """Sums met variable/column for a given year's growing season.
-    (growing season = Apr, May, Jun, Jul, Aug, Sep)
-
-    Args:
-        weather_csv (.csv): csv file containing weather data
-        year (int): year to obtain precipitation data for
-        col_indedx (int): index for df column to sum (default 5 = precip)
-    Returns:
-        [list]: list of cumulative monthly precip
-    """
-    leap_years = [ yr for yr in range( 1980, 2040, 4 ) ]
-    if year in leap_years:
-        slices = (92, 121, 122, 152, 153, 182, 183, 213, 214, 244, 245, 274)
-    else:
-        slices = (91, 120, 121, 151, 152, 181, 182, 212, 213, 243, 244, 273)
-    df = pd.read_csv(weather_csv)
-    year_df = df.loc[df['year'] == year].reset_index(drop=True)
-    #get values between desired sclices for precip column
-    apr_sum = sum(year_df.iloc[slices[0]:slices[1], col_index])
-    may_sum = sum(year_df.iloc[slices[2]:slices[3], col_index])
-    jun_sum = sum(year_df.iloc[slices[4]:slices[5], col_index])
-    jul_sum = sum(year_df.iloc[slices[6]:slices[7], col_index])
-    aug_sum = sum(year_df.iloc[slices[8]:slices[9], col_index])
-    sep_sum = sum(year_df.iloc[slices[10]:slices[11], col_index])
-    month_sums = (apr_sum, may_sum, jun_sum, jul_sum, aug_sum, sep_sum)
-    return month_sums
-
-def create_summed_met_df (weather_csv, years, col_index):
-    """Creates a new pd.df with growing season years as col and months Apr-Sep as rows
-    for the summed met variable of interest (eg precip).
-
-    Args:
-        weather_csv (str): path to met file csv
-        years (list): list of years to analyze
-        col_index (int): index of the variable of interest (eg 5 = precip)
-    Returns:
-        [pd.df]: dataframe with each column being the year and rows being months Apr to Sep
-    """
-    df = pd.DataFrame()
-    for i in years:
-        met_sum_list = sum_met_season_col(weather_csv, i, col_index)
-        df[f'{i}'] = met_sum_list
-    return df
-
-def chart_met_growing_seasons(df, field_name, met_var, var_units, years, plot_style, fig_width=10, fig_height=12, ylim=350, cols=2):
-    """Creates bar charts of met variable for N seasons/years.
-
-    Args:
-        df (pd.df): dataframe with years as columns
-        field_name (str): name of field met file is for
-        met_var (str): the variable the df has data for (eg, Precipitation)
-        var_units (str): the units the variable is in (eg, mm)
-        years (dict): dict containing the years to chart from the df
-        plot_style (str): matplotlib style to use
-        fig_width (int, optional): [width of figure in inches]. Defaults to 10.
-        fig_height (int, optional): [height of figure in inches]. Defaults to 12.
-
-    Returns:
-        matplotlib Figure with subplots for each year.
-    """
-    x = ('Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep')
-    tot = len(years)
-    tot_range = range(tot)
-    rows = tot // cols 
-    rows += tot % cols
-    position = range(1,tot + 1)
-    fig = plt.figure(1, figsize=(fig_width, fig_height))
-    for (i, k) in zip(years, tot_range):
-        y = df[f'{i}']
-        # add every single subplot to the figure with a for loop
-        ax = fig.add_subplot(rows,cols,position[k])
-        ax.set_ylim(0,ylim)
-        ax.bar(x,y)
-        ax.set(title=f'{i}', ylabel=met_var)
-    fig.suptitle(f'{field_name} Monthly {met_var} ({var_units})', fontsize=14, fontweight='bold', y=1.02)
-    fig.tight_layout()
-    plt.show()
+###---------------------------------------------------------###
+###           General munging to create APSIM files         ###
+###---------------------------------------------------------###
 
 def get_distinct(dbconn, table, id_column):
     '''
@@ -196,45 +112,79 @@ def get_rotation(df, crop_column):
         print('Something went wrong')
         traceback.print_exc()
 
+###---------------------------------------------------------###
+###                    General geo munging                  ###
+###---------------------------------------------------------###
 
 def wkb_hexer(line):
     'Converts multipolygon column in gpd to wkb'
     return line.wkb_hex
 
-#TODO munging that still needs implemented
-# For re-projecting input vector layer to raster projection
-def reproject_vector(vector_gpd, raster):
-    proj = raster.crs.to_proj4()
-    print("Original vector layer projection: ", vector_gpd.crs)
-    reproj = vector_gpd.to_crs(proj)
-    print("New vector layer projection (PROJ4): ", reproj.crs)
-    return reproj
-#stats list: ['min', 'max', 'mean', 'count', 'sum', 'std', 'median', 'majority', 'minority', 'unique', 'range']
+def reproject_vector(in_path, out_path, target_crs):
+    """Reprojects vector file (eg, shapefile) to target CRS.
 
-def reproject_raster(inpath, outpath, new_crs):
-    dst_crs = new_crs # CRS for web meractor 
+    Args:
+        in_path (str): Path to file to reproject
+        out_path (str): Path and name for new, reprojected file.
+        target_crs (str, gpd_df.crs): String or use gpd_df.crs to input target CRS.
 
-    with rio.open(inpath) as src:
-        transform, width, height = calculate_default_transform(
-            src.crs, dst_crs, src.width, src.height, *src.bounds)
-        kwargs = src.meta.copy()
-        kwargs.update({
-            'crs': dst_crs,
-            'transform': transform,
-            'width': width,
-            'height': height
-        })
+    Returns:
+        [str]: Path to newly written geojson file.
+    """
+    try:
+        gpd_df = gpd.read_file(in_path)
+        if gpd_df.crs == target_crs:
+            print("File is already in target CRS.")
+            return in_path
+        elif gpd_df.crs != target_crs:
+            new_file = gpd_df.to_crs(target_crs)
+            print(f"{gpd_df} reprojected to {target_crs}.")
+            new_file.to_file(out_path, driver='GeoJSON')
+            print(f"File re-written to {out_path}")
+            return out_path
+    except:
+        print("Something went wrong.")
+        traceback.print_exc()
 
-        with rio.open(outpath, 'w', **kwargs) as dst:
-            for i in range(1, src.count + 1):
-                reproject(
-                    source=rio.band(src, i),
-                    destination=rio.band(dst, i),
-                    src_transform=src.transform,
-                    src_crs=src.crs,
-                    dst_transform=transform,
-                    dst_crs=dst_crs,
-                    resampling=Resampling.nearest)
+def reproject_raster(inpath, outpath, target_crs):
+    """Reprojects raster file (.tiff) to new crs.
+
+    Args:
+        inpath (str): Path to raster file.
+        outpath (str): Path to output the reprojected raster file.
+        target_crs (str): CRS to reproject to e.g., epsg:26915
+    
+    Returns:
+        [str]: Path to newly projected tif file.
+    """
+    dst_crs = target_crs # CRS for web meractor 
+    df = rio.open(inpath)
+    if df.crs == target_crs:
+        print("Raster files already in target CRS.")
+        pass
+    else:
+        with rio.open(inpath) as src:
+            transform, width, height = calculate_default_transform(
+                src.crs, dst_crs, src.width, src.height, *src.bounds)
+            kwargs = src.meta.copy()
+            kwargs.update({
+                'crs': dst_crs,
+                'transform': transform,
+                'width': width,
+                'height': height
+            })
+
+            with rio.open(outpath, 'w', **kwargs) as dst:
+                for i in range(1, src.count + 1):
+                    reproject(
+                        source=rio.band(src, i),
+                        destination=rio.band(dst, i),
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        dst_transform=transform,
+                        dst_crs=dst_crs,
+                        resampling=Resampling.nearest)
+            return outpath
 
 def get_zonal_stats(vector, raster, stats):
     # Run zonal statistics, store result in geopandas dataframe
@@ -263,6 +213,123 @@ def stats_to_raster(zdf, raster, stats, out_raster, no_data='y'):
     with rio.open(out_raster, 'w', **meta) as out:
         out.write_band(1, burned)
     print("Zonal Statistics Raster generated")
+
+
+###---------------------------------------------------------###
+###                 Parse precip from met CSV               ###
+###---------------------------------------------------------###
+
+#these are just reference for when months end and start in cleaned met csv, including shift for leap years
+month_start_end = [
+    {'apr_s':91, 'apr_e':120},
+    {'may_s':121, 'may_e':151},
+    {'jun_s':152, 'jun_e':181},
+    {'jul_s':182, 'jul_e':212},
+    {'aug_s':213, 'aug_e':243},
+    {'sep_s':244, 'sep_e':273}]
+
+month_start_end_leap = [
+    {'apr_s':92, 'apr_e':121},
+    {'may_s':122, 'may_e':152},
+    {'jun_s':153, 'jun_e':182},
+    {'jul_s':183, 'jul_e':213},
+    {'aug_s':214, 'aug_e':244},
+    {'sep_s':245, 'sep_e':274}]
+
+def sum_met_precip(met_path, year, precip_col='rain (mm)'):
+    """Sums met file's total precip for target year.
+
+    Args:
+        met_path (str): path to target met .csv file.
+        year (int): Year to sum weather for.
+        precip_col (str, optional): Name of precipitation column in met csv. Defaults to 'rain (mm)'.
+
+    Returns:
+        [int]: Returns total precip for given year.
+    """
+    df = pd.read_csv(met_path)
+    year_df = df.loc[df['year'] == year].reset_index(drop=True)
+    total_precip = year_df[precip_col].sum()
+    return total_precip
+
+def sum_met_season_col(weather_csv, year, col_index=5):
+    """Sums met variable/column for a given year's growing season.
+    (growing season = Apr, May, Jun, Jul, Aug, Sep)
+
+    Args:
+        weather_csv (.csv): csv file containing weather data
+        year (int): year to obtain precipitation data for
+        col_indedx (int): index for df column to sum (default 5 = precip)
+    Returns:
+        [list]: list of cumulative monthly precip
+    """
+    leap_years = [ yr for yr in range( 1980, 2040, 4 ) ]
+    if year in leap_years:
+        slices = (92, 121, 122, 152, 153, 182, 183, 213, 214, 244, 245, 274)
+    else:
+        slices = (91, 120, 121, 151, 152, 181, 182, 212, 213, 243, 244, 273)
+    df = pd.read_csv(weather_csv)
+    year_df = df.loc[df['year'] == year].reset_index(drop=True)
+    #get values between desired sclices for precip column
+    apr_sum = sum(year_df.iloc[slices[0]:slices[1], col_index])
+    may_sum = sum(year_df.iloc[slices[2]:slices[3], col_index])
+    jun_sum = sum(year_df.iloc[slices[4]:slices[5], col_index])
+    jul_sum = sum(year_df.iloc[slices[6]:slices[7], col_index])
+    aug_sum = sum(year_df.iloc[slices[8]:slices[9], col_index])
+    sep_sum = sum(year_df.iloc[slices[10]:slices[11], col_index])
+    month_sums = (apr_sum, may_sum, jun_sum, jul_sum, aug_sum, sep_sum)
+    return month_sums
+
+def create_summed_met_df (weather_csv, years, col_index):
+    """Creates a new pd.df with growing season years as col and months Apr-Sep as rows
+    for the summed met variable of interest (eg precip).
+
+    Args:
+        weather_csv (str): path to met file csv
+        years (list): list of years to analyze
+        col_index (int): index of the variable of interest (eg 5 = precip)
+    Returns:
+        [pd.df]: dataframe with each column being the year and rows being months Apr to Sep
+    """
+    df = pd.DataFrame()
+    for i in years:
+        met_sum_list = sum_met_season_col(weather_csv, i, col_index)
+        df[f'{i}'] = met_sum_list
+    return df
+
+def chart_met_growing_seasons(df, field_name, met_var, var_units, years, plot_style, fig_width=10, fig_height=12, ylim=350, cols=2):
+    """Creates bar charts of met variable for N seasons/years.
+
+    Args:
+        df (pd.df): dataframe with years as columns
+        field_name (str): name of field met file is for
+        met_var (str): the variable the df has data for (eg, Precipitation)
+        var_units (str): the units the variable is in (eg, mm)
+        years (dict): dict containing the years to chart from the df
+        plot_style (str): matplotlib style to use
+        fig_width (int, optional): [width of figure in inches]. Defaults to 10.
+        fig_height (int, optional): [height of figure in inches]. Defaults to 12.
+
+    Returns:
+        matplotlib Figure with subplots for each year.
+    """
+    x = ('Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep')
+    tot = len(years)
+    tot_range = range(tot)
+    rows = tot // cols 
+    rows += tot % cols
+    position = range(1,tot + 1)
+    fig = plt.figure(1, figsize=(fig_width, fig_height))
+    for (i, k) in zip(years, tot_range):
+        y = df[f'{i}']
+        # add every single subplot to the figure with a for loop
+        ax = fig.add_subplot(rows,cols,position[k])
+        ax.set_ylim(0,ylim)
+        ax.bar(x,y)
+        ax.set(title=f'{i}', ylabel=met_var)
+    fig.suptitle(f'{field_name} Monthly {met_var} ({var_units})', fontsize=14, fontweight='bold', y=1.02)
+    fig.tight_layout()
+    plt.show()
 
 def get_top_ten_days(df, year, year_col, precip_col):
     """Gets top 10 precipitation events from pandas df (met csv).
@@ -363,4 +430,156 @@ def get_top2_precip_events(df, days_list, day_col, precip_col):
         event1_precip = df[precip_col].iloc[0]
         event2_precip = df[precip_col].iloc[1]
         precip_events = [event1_precip, event2_precip]
-    return precip_events 
+    return precip_events
+
+###---------------------------------------------------------###
+###                       Sentinel 2                        ###
+###---------------------------------------------------------###
+
+def find_sentinel_products(footprint, api, start_date, end_date, max_cloud_cover):
+    products = api.query(footprint,
+                        date=(start_date, end_date),
+                        platformname='Sentinel-2',
+                        cloudcoverpercentage= (0,max_cloud_cover))
+    products_gdf = api.to_geodataframe(products)
+    return products_gdf
+
+def download_sentinel_image(products_gdf, api, out_path, img_index=0):
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    os.chdir(out_path)
+    products_gdf_sorted = products_gdf.sort_values(['cloudcoverpercentage'], ascending=[True])
+    img_selected = products_gdf_sorted.index[img_index]
+    img_meta = products_gdf_sorted.iloc[img_index]
+    print(f"Downloading image {img_meta['title']}, {img_meta['summary']} with cloud cover of {img_meta['cloudcoverpercentage']}.")
+    api.download(img_selected)
+    return img_meta
+
+def check_product_status(image_uuid):
+    product_info = api.get_product_odata(image_uuid)
+
+    if product_info['Online']:
+        print(f'Product {image_uuid} is online. Starting download.')
+        api.download(image_uuid)
+    else:
+        print(f'Product {image_uuid} is not online.')
+
+def unzip_sentinel_images(img_title):
+    file_name = f"{img_title}.zip"
+    with ZipFile(file_name, 'r') as zip:
+        zip.extractall()
+
+###---------------------------------------------------------###
+###                           NDVI                          ###
+###---------------------------------------------------------###
+
+def locate_NIR_RED_images(in_path):
+    #get all files with .jp2 in folder
+    file_list = glob(in_path + '/**/*.jp2', recursive=True)
+    images = []
+    #find and return the band 4 and band 8 images
+    for filename in file_list:
+            for pattern in ['*B04.jp2', '*B08.jp2']:
+                if fnmatch.fnmatch(filename, pattern):
+                    images.append(filename)
+    return images
+
+def create_ndvi_tif(file_paths_list, out_path):
+    #b4 is red band; b8 is nir band
+    b4_file = [file for file in file_paths_list if 'B04' in file]
+    b8_file = [file for file in file_paths_list if 'B08' in file]
+    b4 = rio.open(b4_file[0])
+    b8 = rio.open(b8_file[0])
+    red_b = b4.read()
+    nir_b = b8.read()
+    ndvi = (nir_b.astype(float)-red_b.astype(float))/(nir_b+red_b)
+    meta = b4.meta
+    meta.update(driver='GTiff')
+    meta.update(dtype=rio.float32)
+
+    with rio.open(out_path, 'w', **meta) as dst:
+        dst.write(ndvi.astype(rio.float32))
+
+
+def clip_raster(in_file, mask_layer, out_path):
+    #crop ndvi image to field boundary
+    with rio.open(in_file) as src:
+        out_image, out_transform = mask(src, mask_layer, crop=True)
+        out_meta = src.meta.copy()
+        out_meta.update({"driver": "GTiff",
+                    "height": out_image.shape[1],
+                    "width": out_image.shape[2],
+                    "transform": out_transform})
+        
+    with rio.open(out_path, "w", **out_meta) as dst:
+        dst.write(out_image)
+
+###---------------------------------------------------------###
+###                       Create full DF                    ###
+###---------------------------------------------------------###
+
+def prepare_twi_df(ym_path, in_path, out_path, target_crs, year, field_name):
+    new_twi_file = reproject_raster(in_path, out_path, target_crs)
+    twi_stats = rs.zonal_stats(ym_path, new_twi_file,  geojson_out=True, stats=['mean'])
+    twi_gdf = gpd.GeoDataFrame.from_features(twi_stats)
+    twi_gdf.rename(columns={'mean':'mean_twi'}, inplace=True)
+    twi_gdf.insert(1, 'Year', year)
+    twi_gdf.insert(1, 'Field', field_name)
+    twi_gdf = twi_gdf.set_crs(target_crs)
+    return twi_gdf
+
+def prepare_ndvi_df(twi_gdf, in_path, out_path, target_crs):
+    #prepare ndvi
+    new_ndvi_file = reproject_raster(in_path, out_path, target_crs)
+    ndvi_stats = rs.zonal_stats(twi_gdf, new_ndvi_file,  geojson_out=True, stats=['mean'])
+    ndvi_twi_gdf = gpd.GeoDataFrame.from_features(ndvi_stats)
+    ndvi_twi_gdf.rename(columns={'mean':'mean_ndvi'}, inplace=True)
+    #set projection again since it is lost for some reason
+    ndvi_twi_gdf = ndvi_twi_gdf.set_crs(target_crs)
+    return ndvi_twi_gdf
+
+def prepare_met_df(in_path, ndvi_twi_gdf, year):
+    #get met data
+    met_df = pd.read_csv(in_path)
+    top10_precip_events_df = get_top_ten_days(met_df, year, 'year', 'rain (mm)')
+    adjacent_days_list = check_adjacent_days(top10_precip_events_df, 'day', 'rain (mm)')
+    top2 = get_top2_precip_events(top10_precip_events_df, adjacent_days_list, 'day', 'rain (mm)')
+    total_precip = sum_met_precip(in_path, year)
+    ndvi_twi_gdf.insert(3, 'top_precip_event_2', top2[1])
+    ndvi_twi_gdf.insert(3, 'top_precip_event_1', top2[0])
+    ndvi_twi_gdf.insert(3, 'yearly_precip', total_precip)
+    ndvi_twi_met_gdf = ndvi_twi_gdf
+    return ndvi_twi_met_gdf
+
+def prepare_ssurgo_df(ndvi_twi_met_gdf, in_path, out_path, target_crs):
+    #prepare ssurgo
+    new_ssurgo_file = reproject_vector(in_path, out_path, target_crs)
+    ssurgo_df = gpd.read_file(new_ssurgo_file)
+    ssurgo_df = ssurgo_df.drop(['objectid','shape_area', 'shape_length', 'spatialver'], axis=1)
+    ndvi_twi_met_ssurgo_gdf = gpd.sjoin(ndvi_twi_met_gdf, ssurgo_df)
+    return ndvi_twi_met_ssurgo_gdf
+
+def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path):
+    #prepare apsim files
+    if os.path.exists(project_out_path):
+        num_files_removed = 0
+        for filename in os.listdir(project_out_path):
+            for pattern in ['*.dbf', '*.shp', '*.cpg',
+                            '*.prj','*.shx']:
+                if fnmatch.fnmatch(filename, pattern):
+                    os.remove(project_out_path + filename)
+                    num_files_removed += 1
+        print(f"Removed {num_files_removed} old files.")
+    print("Created out path directory.")
+    apsim_df = parse_summary_output_field(apsim_files_path, year)
+    #check if mukeys are all in both files
+    mukeys = list(np.unique(apsim_df['mukey']))
+    other_mukeys = list(np.unique(ndvi_twi_met_ssurgo_gdf['mukey']))
+    if mukeys == other_mukeys:
+        print('Mukeys are equal')
+    else:
+        print('Not all mukeys same in both files.')
+        pass
+    #merge to create full df
+    full_df = ndvi_twi_met_ssurgo_gdf.merge(apsim_df, on="mukey")
+    full_df.to_file(project_out_path)
