@@ -104,6 +104,7 @@ def run_a_sim(sim_filename, lock):
         si.wShowWindow = 0 # SW_HIDE - hides cmd windows
         startupinfo = si
     with open(tmp_filename, 'w') as tmp_file:
+        #TODO make sure the os.remove file is working correctly
         if subprocess.call([apsim_exe, sim_filename], stdout=tmp_file, stderr=tmp_file, startupinfo=startupinfo) == 0:
             os.remove(tmp_file)
 
