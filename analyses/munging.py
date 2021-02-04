@@ -7,6 +7,7 @@ import os
 import fnmatch
 from glob import glob
 import database as db
+from zipfile import ZipFile
 import rasterio as rio
 import rasterstats as rs
 from rasterio.warp import calculate_default_transform, reproject, Resampling
@@ -464,10 +465,10 @@ def check_product_status(image_uuid):
     else:
         print(f'Product {image_uuid} is not online.')
 
-def unzip_sentinel_images(img_title):
-    file_name = f"{img_title}.zip"
+def unzip_sentinel_images(image_path, img_title):
+    file_name = f"{image_path}\\{img_title}.zip"
     with ZipFile(file_name, 'r') as zip:
-        zip.extractall()
+        zip.extractall(path=image_path)
 
 ###---------------------------------------------------------###
 ###                           NDVI                          ###
