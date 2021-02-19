@@ -9,6 +9,7 @@ analyses/**/*.xlsx
 analyses/**/apsim_files
 analyses/**/shape_files
 analyses/**/database.py
+analyses/**/out_files
 test_apsim_files*/
 setup.py
 apsim/apsim_parser.ipynb
