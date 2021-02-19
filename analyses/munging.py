@@ -9,6 +9,7 @@ from glob import glob
 import database as db
 from zipfile import ZipFile
 import rasterio as rio
+from rasterio.mask import mask
 import rasterstats as rs
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 from apsim.apsim_output_parser import parse_summary_output_field
@@ -139,7 +140,7 @@ def reproject_vector(in_path, out_path, target_crs):
             return in_path
         elif gpd_df.crs != target_crs:
             new_file = gpd_df.to_crs(target_crs)
-            print(f"{gpd_df} reprojected to {target_crs}.")
+            print(f"Dataframe reprojected to {target_crs}.")
             new_file.to_file(out_path, driver='GeoJSON')
             print(f"File re-written to {out_path}")
             return out_path
@@ -159,33 +160,28 @@ def reproject_raster(inpath, outpath, target_crs):
         [str]: Path to newly projected tif file.
     """
     dst_crs = target_crs # CRS for web meractor 
-    df = rio.open(inpath)
-    if df.crs == target_crs:
-        print("Raster files already in target CRS.")
-        pass
-    else:
-        with rio.open(inpath) as src:
-            transform, width, height = calculate_default_transform(
-                src.crs, dst_crs, src.width, src.height, *src.bounds)
-            kwargs = src.meta.copy()
-            kwargs.update({
-                'crs': dst_crs,
-                'transform': transform,
-                'width': width,
-                'height': height
-            })
+    with rio.open(inpath) as src:
+        transform, width, height = calculate_default_transform(
+            src.crs, dst_crs, src.width, src.height, *src.bounds)
+        kwargs = src.meta.copy()
+        kwargs.update({
+            'crs': dst_crs,
+            'transform': transform,
+            'width': width,
+            'height': height
+        })
 
-            with rio.open(outpath, 'w', **kwargs) as dst:
-                for i in range(1, src.count + 1):
-                    reproject(
-                        source=rio.band(src, i),
-                        destination=rio.band(dst, i),
-                        src_transform=src.transform,
-                        src_crs=src.crs,
-                        dst_transform=transform,
-                        dst_crs=dst_crs,
-                        resampling=Resampling.nearest)
-            return outpath
+        with rio.open(outpath, 'w', **kwargs) as dst:
+            for i in range(1, src.count + 1):
+                reproject(
+                    source=rio.band(src, i),
+                    destination=rio.band(dst, i),
+                    src_transform=src.transform,
+                    src_crs=src.crs,
+                    dst_transform=transform,
+                    dst_crs=dst_crs,
+                    resampling=Resampling.nearest)
+        return outpath
 
 def get_zonal_stats(vector, raster, stats):
     # Run zonal statistics, store result in geopandas dataframe
@@ -446,17 +442,14 @@ def find_sentinel_products(footprint, api, start_date, end_date, max_cloud_cover
     return products_gdf
 
 def download_sentinel_image(products_gdf, api, out_path, img_index=0):
-    if not os.path.exists(out_path):
-        os.makedirs(out_path)
-    os.chdir(out_path)
     products_gdf_sorted = products_gdf.sort_values(['cloudcoverpercentage'], ascending=[True])
     img_selected = products_gdf_sorted.index[img_index]
     img_meta = products_gdf_sorted.iloc[img_index]
     print(f"Downloading image {img_meta['title']}, {img_meta['summary']} with cloud cover of {img_meta['cloudcoverpercentage']}.")
-    api.download(img_selected)
+    api.download(img_selected, directory_path=out_path)
     return img_meta
 
-def check_product_status(image_uuid):
+def check_product_status(image_uuid, api):
     product_info = api.get_product_odata(image_uuid)
 
     if product_info['Online']:
