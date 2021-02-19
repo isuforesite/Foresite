@@ -360,7 +360,7 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
     Yields:
         None: Creates .apsim files for each SSURGO soil mukey, management, and weather.
     """
-    runs_folder_path = f'apsim_files/{field_name}/{end_year}/{rotation}'
+    runs_folder_path = f'apsim_files/{field_name}/{end_year}/{rotation}/'
     if os.path.exists(runs_folder_path):
         num_files_removed = 0
         for filename in os.listdir(runs_folder_path):
@@ -369,7 +369,7 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                 if fnmatch.fnmatch(filename, pattern):
                     os.remove(runs_folder_path + filename)
                     num_files_removed += 1
-    print(f"Removed {num_files_removed} old files.")
+        print(f"Removed {num_files_removed} old files.")
     if not os.path.exists(runs_folder_path):
         os.makedirs(runs_folder_path)
     start_date = f'01/01/{start_year}'
