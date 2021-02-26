@@ -512,20 +512,21 @@ def clip_raster(in_file, mask_layer, out_path):
 ###                       Create full DF                    ###
 ###---------------------------------------------------------###
 
-def prepare_twi_df(ym_path, in_path, out_path, target_crs, year, field_name):
+def prepare_twi_df(ym_path, in_path, out_path, target_crs, year, field_name, crop, all_touched=False):
     new_twi_file = reproject_raster(in_path, out_path, target_crs)
-    twi_stats = rs.zonal_stats(ym_path, new_twi_file,  geojson_out=True, stats=['mean'])
+    twi_stats = rs.zonal_stats(ym_path, new_twi_file,  geojson_out=True, stats=['mean'], all_touched=all_touched)
     twi_gdf = gpd.GeoDataFrame.from_features(twi_stats)
     twi_gdf.rename(columns={'mean':'mean_twi'}, inplace=True)
+    twi_gdf.insert(1, 'Crop', crop)
     twi_gdf.insert(1, 'Year', year)
     twi_gdf.insert(1, 'Field', field_name)
     twi_gdf = twi_gdf.set_crs(target_crs)
     return twi_gdf
 
-def prepare_ndvi_df(twi_gdf, in_path, out_path, target_crs):
+def prepare_ndvi_df(twi_gdf, in_path, out_path, target_crs, all_touched=False):
     #prepare ndvi
     new_ndvi_file = reproject_raster(in_path, out_path, target_crs)
-    ndvi_stats = rs.zonal_stats(twi_gdf, new_ndvi_file,  geojson_out=True, stats=['mean'])
+    ndvi_stats = rs.zonal_stats(twi_gdf, new_ndvi_file,  geojson_out=True, stats=['mean'], all_touched=all_touched)
     ndvi_twi_gdf = gpd.GeoDataFrame.from_features(ndvi_stats)
     ndvi_twi_gdf.rename(columns={'mean':'mean_ndvi'}, inplace=True)
     #set projection again since it is lost for some reason
