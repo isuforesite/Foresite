@@ -554,7 +554,7 @@ def prepare_ssurgo_df(ndvi_twi_met_gdf, in_path, out_path, target_crs):
     ndvi_twi_met_ssurgo_gdf = gpd.sjoin(ndvi_twi_met_gdf, ssurgo_df)
     return ndvi_twi_met_ssurgo_gdf
 
-def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path):
+def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path, write_file):
     #prepare apsim files
     if os.path.exists(project_out_path):
         num_files_removed = 0
@@ -565,7 +565,6 @@ def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, proje
                     os.remove(project_out_path + filename)
                     num_files_removed += 1
         print(f"Removed {num_files_removed} old files.")
-    print("Created out path directory.")
     apsim_df = parse_summary_output_field(apsim_files_path, year)
     #check if mukeys are all in both files
     mukeys = list(np.unique(apsim_df['mukey']))
@@ -577,4 +576,5 @@ def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, proje
         pass
     #merge to create full df
     full_df = ndvi_twi_met_ssurgo_gdf.merge(apsim_df, on="mukey")
-    full_df.to_file(project_out_path)
+    full_path = os.path.join(project_out_path, write_file)
+    full_df.to_file(full_path)
