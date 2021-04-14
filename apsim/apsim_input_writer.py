@@ -339,10 +339,11 @@ def create_mukey_county_runs(soils_list, dbconn, rotation, met_name, county_name
             sim_count +=1
             continue
 
-def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field', start_year=2015, end_year=2018, sfc_mgmt=None, cfs_mgmt=None, cc_mgmt=None, swim = False, saxton=False):
+def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field', tar_folder=None, start_year=2015, end_year=2018, sfc_mgmt=None, cfs_mgmt=None, cc_mgmt=None, swim = False, saxton=False):
     """Creates APSIM simulation files for desired list of SSURGO mukeys.
 
     Args:
+        tar_folder (str): Target folder to write files to.
         soils_list (list): list of each SSURGO mukey to create APSIM file for
         dbconn (obj): Connections to PostgreSQL server with SSURGO data
         rotation (str): which rotation to create the file for. Currently supports corn following soy (CFS),
@@ -360,7 +361,11 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
     Yields:
         None: Creates .apsim files for each SSURGO soil mukey, management, and weather.
     """
-    runs_folder_path = f'apsim_files/{field_name}/{end_year}/{rotation}/'
+    if tar_folder == None:
+        tar_folder = os.getcwd()
+    runs_folder_path = f'{tar_folder}/apsim_files/{field_name}/{end_year}/{rotation}/'
+    if not os.path.exists(runs_folder_path):
+        os.makedirs(runs_folder_path)
     if os.path.exists(runs_folder_path):
         num_files_removed = 0
         for filename in os.listdir(runs_folder_path):
@@ -370,13 +375,11 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                     os.remove(runs_folder_path + filename)
                     num_files_removed += 1
         print(f"Removed {num_files_removed} old files.")
-    if not os.path.exists(runs_folder_path):
-        os.makedirs(runs_folder_path)
     start_date = f'01/01/{start_year}'
     end_date = f'31/12/{end_year}'
     #save rotation for clukey to crops list
     #loop through field keys e.g., clukeys
-    met_folder_path = f'apsim_files/{field_name}/{end_year}/{rotation}/met_files'
+    met_folder_path = f'{tar_folder}/apsim_files/{field_name}/{end_year}/{rotation}/met_files'
     if not os.path.exists(met_folder_path):
         os.makedirs(met_folder_path)
     met_path = f"met_files/{met_name}"
@@ -609,38 +612,6 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
             traceback.print_exc()
             sim_count +=1
             continue
-
-def create_and_run_strips_apsim_files(field_name, mukeys, rotation, met_name, year_list, sfc_mgmt=None, cfs_mgmt=None):
-    for i in year_list:
-        end_year = i
-        start_year = end_year - 3
-        prior_year = end_year - 1
-        if rotation == 'sfc':
-            sfc_mgmt = json.loads( open( f'crop_jsons/strips_sfc_{end_year}.json', 'r' ).read() )
-            cfs_mgmt = json.loads( open( f'crop_jsons/strips_cfs_{prior_year}.json', 'r' ).read() )
-            create_mukey_runs(mukeys, dbconn, 'sfc', f'{met_name}.met', f'{field_name}Default', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt)
-            create_mukey_runs(mukeys, dbconn, 'sfc', f'{met_name}.met', f'{field_name}Saxton', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt, saxton=True)
-            original = f'met_files/{met_name}.met'
-            target = f'apsim_files/{field_name}Default/{end_year}/sfc/met_files/{met_name}.met'
-            shutil.copyfile(original, target)
-            target = f'apsim_files/{field_name}Saxton/{end_year}/sfc/met_files/{met_name}.met'
-            shutil.copyfile(original, target)
-            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\sfc\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\sfc\\*.sim")
-            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\sfc\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\sfc\\*.sim")
-        elif rotation == 'cfs':
-            sfc_mgmt = json.loads( open( f'crop_jsons/strips_sfc_{prior_year}.json', 'r' ).read() )
-            cfs_mgmt = json.loads( open( f'crop_jsons/strips_cfs_{end_year}.json', 'r' ).read() )
-            create_mukey_runs(mukeys, dbconn, 'cfs', f'{met_name}.met', f'{field_name}Default', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt)
-            create_mukey_runs(mukeys, dbconn, 'cfs', f'{met_name}.met', f'{field_name}Saxton', start_year=start_year, end_year=end_year, sfc_mgmt=sfc_mgmt, cfs_mgmt=cfs_mgmt, saxton=True)
-            original = f'met_files/{met_name}.met'
-            target = f'apsim_files/{field_name}Default/{end_year}/cfs/met_files/{met_name}.met'
-            shutil.copyfile(original, target)
-            target = f'apsim_files/{field_name}Saxton/{end_year}/cfs/met_files/{met_name}.met'
-            shutil.copyfile(original, target)
-            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\cfs\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Default\\{end_year}\\cfs\\*.sim")
-            analyses.run_apsim.run_all_simulations(apsim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\cfs\\*.apsim", sim_files_path=f"apsim_files\\{field_name}Saxton\\{end_year}\\cfs\\*.sim")
-        else:
-            print("That rotation is not currently set up")
 
 if __name__ == "__main__":
     pass
