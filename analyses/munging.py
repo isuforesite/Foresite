@@ -2,6 +2,8 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import csv
+from datetime import datetime
 import json
 import os
 import fnmatch
@@ -578,3 +580,35 @@ def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, proje
     full_df = ndvi_twi_met_ssurgo_gdf.merge(apsim_df, on="mukey")
     full_path = os.path.join(project_out_path, write_file)
     full_df.to_file(full_path)
+
+###---------------------------------------------------------###
+###                       Miscellaneous                     ###
+###---------------------------------------------------------###
+ 
+# Function to convert a CSV to JSON
+# Takes the key/id column and file paths as arguments
+def csv_to_json(key_col, csv_file_path, json_file_path):
+     
+    # create a dictionary
+    data = {}
+     
+    # Open a csv reader called DictReader
+    with open(csv_file_path, encoding='utf-8') as csvf:
+        csv_reader = csv.DictReader(csvf)
+         
+        # Convert each row into a dictionary 
+        # and add it to data
+        for rows in csv_reader:
+             
+            # key_col is the primary key/id column
+            key = rows[key_col]
+            data[key] = rows
+ 
+    # Open a json writer, and use the json.dumps() 
+    # function to dump data
+    with open(json_file_path, 'w', encoding='utf-8') as jsonf:
+        jsonf.write(json.dumps(data, indent=4))
+         
+
+#convert date to number date (e.g., day of year = 127)
+day_of_year = datetime.now().timetuple().tm_yday
