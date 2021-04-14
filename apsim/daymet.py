@@ -288,9 +288,19 @@ class Weather:
         self.data = wth_df.append( self.data, sort = False )
         self.data = self.data.round( 2 )
 
-def create_excel_met(lat, long, start_year, end_year, met_name):
-    if not os.path.exists(f'apsim_files/{met_name}/met_files'):
-        os.makedirs(f'apsim_files/{met_name}/met_files')
+def create_excel_met(lat, long, start_year, end_year, met_name, tar_folder='apsim_files/met'):
+    """Creates Daymet met file as an Excel spreadsheet.
+
+    Args:
+        lat (int): Latitude of single pixel to extract weather data for.
+        long (int): Longitude of single pixel to extract weather data for.
+        start_year (int): Starting year of met data to get.
+        end_year (int): Ending year of met data to get.
+        met_name (str): Name of met file to write.
+        tar_folder (str, optional): Target folder to write met file to. Defaults to 'apsim_files/met'.
+    """
+    if not os.path.exists(tar_folder):
+        os.makedirs(tar_folder)
     wth_obj = Weather().from_daymet(lat, long, start_year, end_year)
     wth_df = wth_obj.data
     tav = round(wth_df[ 'maxt' ].mean(), 1)
@@ -328,7 +338,8 @@ def create_excel_met(lat, long, start_year, end_year, met_name):
     ws['A1'] = 'stationname = Daymet weather'
     ws.insert_rows(1)
     ws['A1'] = '[weather.met.weather]'
-    wb.save(f'apsim_files/{met_name}/met_files/{met_name}.xlsx')
+    full_path = os.path.join(tar_folder, f'{met_name}.xlsx')
+    wb.save(full_path)
 
 
 '''
@@ -371,7 +382,7 @@ def create_all_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry
         print(f'Geopandas table for {county_name} county created.')
         centroid = get_centroid(county, id_col, geo_col)
         print(f'Centroid located at {centroid}.')
-        weather = create_excel_met(centroid[0], centroid[1], 1980, 2019, county_name)
+        create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
         print(f"Met file for {county_name}/{i} at location {centroid} created.")
 
 def create_all_excel_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry', name_col='county'):
@@ -383,5 +394,5 @@ def create_all_excel_met(dbconn, counties, table, id_col='fips', geo_col='wkb_ge
         print(f'Centroid located at {centroid}.')
         if not os.path.exists(f'apsim_files/{county_name}/met_files'):
             os.makedirs(f'apsim_files/{county_name}/met_files')
-        create_excel_met(centroid[0], centroid[1], 1980, 2019, county_name)
+        create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
         print(f"Met file for {county_name}/{i} at location {centroid} created.")
