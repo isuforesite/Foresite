@@ -4,7 +4,6 @@ import requests
 import pandas as pd
 import io
 import os
-from analyses.munging import get_county, get_centroid
 from openpyxl import Workbook
 from openpyxl.styles import Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -361,38 +360,38 @@ def create_met(lat, long, start_year, end_year, filename, path='apsim_files/met_
     weather_obj.write_met_file(f'{path}/{filename}.met')
 
 
-    """
-Create all met files for each county in a given geometry.
+#     """
+# Create all met files for each county in a given geometry.
 
-Args:
-    dbconn {database connection} -- connection to postgresql database
-    counties {array/list} -- every county to be run on in the geometry
-    table {str} -- name of the table within the database to get geometries from
-    id_column {str} -- table column that has unique ids (in this case fips) for each county.
-    geo_col {str} -- table column that has geometry.
-    name_col {str} -- column that has the name for each county - can just use fips columns if no county names in table.
+# Args:
+#     dbconn {database connection} -- connection to postgresql database
+#     counties {array/list} -- every county to be run on in the geometry
+#     table {str} -- name of the table within the database to get geometries from
+#     id_column {str} -- table column that has unique ids (in this case fips) for each county.
+#     geo_col {str} -- table column that has geometry.
+#     name_col {str} -- column that has the name for each county - can just use fips columns if no county names in table.
 
-Returns:
-    Met file for each county in counties.
-"""
-def create_all_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry', name_col='county'):
-    for i in counties:
-        county = get_county(dbconn, table, i, geo_col)
-        county_name = county[name_col][0].replace(" ", "_")
-        print(f'Geopandas table for {county_name} county created.')
-        centroid = get_centroid(county, id_col, geo_col)
-        print(f'Centroid located at {centroid}.')
-        create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
-        print(f"Met file for {county_name}/{i} at location {centroid} created.")
+# Returns:
+#     Met file for each county in counties.
+# """
+# def create_all_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry', name_col='county'):
+#     for i in counties:
+#         county = get_county(dbconn, table, i, geo_col)
+#         county_name = county[name_col][0].replace(" ", "_")
+#         print(f'Geopandas table for {county_name} county created.')
+#         centroid = get_centroid(county, id_col, geo_col)
+#         print(f'Centroid located at {centroid}.')
+#         create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
+#         print(f"Met file for {county_name}/{i} at location {centroid} created.")
 
-def create_all_excel_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry', name_col='county'):
-    for i in counties:
-        county = get_county(dbconn, table, i, geo_col)
-        county_name = county[name_col][0].replace(" ", "_")
-        print(f'Geopandas table for {county_name} county created.')
-        centroid = get_centroid(county, id_col, geo_col)
-        print(f'Centroid located at {centroid}.')
-        if not os.path.exists(f'apsim_files/{county_name}/met_files'):
-            os.makedirs(f'apsim_files/{county_name}/met_files')
-        create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
-        print(f"Met file for {county_name}/{i} at location {centroid} created.")
+# def create_all_excel_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry', name_col='county'):
+#     for i in counties:
+#         county = get_county(dbconn, table, i, geo_col)
+#         county_name = county[name_col][0].replace(" ", "_")
+#         print(f'Geopandas table for {county_name} county created.')
+#         centroid = get_centroid(county, id_col, geo_col)
+#         print(f'Centroid located at {centroid}.')
+#         if not os.path.exists(f'apsim_files/{county_name}/met_files'):
+#             os.makedirs(f'apsim_files/{county_name}/met_files')
+#         create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
+#         print(f"Met file for {county_name}/{i} at location {centroid} created.")

@@ -539,7 +539,6 @@ class Soil:
 
         ### initial no3 ( set to OM percent )
         add_subelements( sample, 'NO3', self.NO3, self.Horizons )
-
         ### initial nh4 ( set to OM percent )
         add_subelements( sample, 'NH4', self.NH4, self.Horizons )
 

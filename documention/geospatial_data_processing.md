@@ -29,3 +29,5 @@ Step 2:
 ### Yield monitor cleaning
 Currently, outliers are removed by simply removing any point  
 with bu/ac under 25 or over 350 bu/ac (col. Yld_Vol_Dr)
+
+### Looping through Pandas DF

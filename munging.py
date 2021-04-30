@@ -3,10 +3,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import csv
+import sys
 from datetime import datetime
 import json
 import os
 import fnmatch
+import analyses.run_apsim
+import shutil
+from apsim.apsim_input_writer import create_mukey_runs
 from glob import glob
 import database as db
 from zipfile import ZipFile
@@ -17,7 +21,57 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 from apsim.apsim_output_parser import parse_summary_output_field
 import traceback
 
+###---------------------------------------------------------###
+###                     Helper functions                    ###
+###---------------------------------------------------------###
 
+def get_management_file(in_path, mgmt_file):
+    full_path = os.path.join(in_path, mgmt_file)
+    mgmt_ops = json.loads(open( full_path, 'r' ).read())
+    return mgmt_ops
+
+def copy_met_file(src, dst):
+    if not os.path.exists(dst):
+        print('Target directory does not exist, creating directory now.')
+        os.mkdir(dst)
+    shutil.copy(src, dst)
+
+def create_apsim_files_from_dict(dbconn, runs_dict, met_folder, swim=False):
+    for i in runs_dict:
+        rotation = runs_dict[i][0]
+        runs_folder = runs_dict[i][1]
+        field_prefix = runs_dict[i][2]
+        met_file = runs_dict[i][3]
+        end_year = runs_dict[i][4]
+        start_year = end_year - 3
+        prior_year = end_year - 1
+        ssurgo_file = os.path.join('ssurgo', runs_dict[i][5])
+        ssurgo_gdf = gpd.read_file(ssurgo_file)
+        mukeys = list(np.unique(ssurgo_gdf['mukey']))
+        if rotation == 'cfs':
+            corn_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_{rotation}_{end_year}.json')
+            soy_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_sfc_{prior_year}.json')
+            # print(json.dumps(corn_mgmt, indent=1))
+            # print(json.dumps(soy_mgmt, indent=1))
+        elif rotation == 'sfc':
+            soy_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_{rotation}_{end_year}.json')
+            corn_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_cfs_{prior_year}.json')
+            # print(json.dumps(soy_mgmt, indent=1))
+            # print(json.dumps(corn_mgmt, indent=1))
+        create_mukey_runs(mukeys, dbconn, rotation, met_file, field_name=runs_folder, start_year=start_year, end_year=end_year, sfc_mgmt=soy_mgmt, cfs_mgmt=corn_mgmt, swim=swim)
+        met_src_path = os.path.join('met_files', met_folder, runs_dict[i][3])
+        met_tar_path = os.path.join('apsim_files', runs_folder, str(end_year), rotation, 'met_files')
+        copy_met_file(met_src_path, met_tar_path)
+    
+def run_apsim_files_from_dict(runs_dict):
+    for i in runs_dict:
+        runs_folder = runs_dict[i][1]
+        end_year = runs_dict[i][4]
+        rotation = runs_dict[i][0]
+        tar_apsim_files_path = os.path.join('apsim_files', runs_folder, str(end_year), rotation)
+        analyses.run_apsim.run_all_simulations(apsim_files_path=tar_apsim_files_path)
+        print(f'Finished running files in {runs_folder}, {end_year}, {rotation}')
+        print(" ")
 
 ###---------------------------------------------------------###
 ###           General munging to create APSIM files         ###
@@ -82,7 +136,7 @@ def get_centroid(geodf, id, geometry):
 
 def get_rotation(df, crop_column):
     """
-    Get the crop rotation for each clukey.
+    Get the crop rotation
     Args:
         df {obj} -- Dataframe that contains individual clukey information.
         crop_column {str} -- Column name that contains the label for what crop is growing for a given year.
@@ -235,7 +289,7 @@ month_start_end_leap = [
     {'aug_s':214, 'aug_e':244},
     {'sep_s':245, 'sep_e':274}]
 
-def sum_met_precip(met_path, year, precip_col='rain (mm)'):
+def sum_met_precip(df, year, precip_col='rain (mm)'):
     """Sums met file's total precip for target year.
 
     Args:
@@ -246,7 +300,9 @@ def sum_met_precip(met_path, year, precip_col='rain (mm)'):
     Returns:
         [int]: Returns total precip for given year.
     """
-    df = pd.read_csv(met_path)
+    #df = pd.read_csv(met_path)
+    set_type = {precip_col : float}
+    df = df.astype(set_type)
     year_df = df.loc[df['year'] == year].reset_index(drop=True)
     total_precip = year_df[precip_col].sum()
     return total_precip
@@ -342,8 +398,10 @@ def get_top_ten_days(df, year, year_col, precip_col):
     Returns:
         [pd df]: Dataframe with top 10 precip events.
     """
+    set_type = {precip_col : float}
     df = df.loc[df[year_col] == year]
-    df = df.nlargest(10, [precip_col])
+    df = df.astype(set_type)
+    df = df.nlargest(10, precip_col)
     return df
 
 def check_adjacent_days(df, day_col, precip_col):
@@ -359,6 +417,11 @@ def check_adjacent_days(df, day_col, precip_col):
         [list]: List of lists with days that are adjacent to one another
         eg., [[155,156],[201,202]]
     """
+    # set_type = {
+    #     day_col: int,
+    #     precip_col : float
+    # }
+    # df = df.astype(set_type)
     df_days = df[day_col]
     df_days = sorted(df_days)
     adjacent_days = []
@@ -478,6 +541,9 @@ def locate_NIR_RED_images(in_path):
             for pattern in ['*B04.jp2', '*B08.jp2']:
                 if fnmatch.fnmatch(filename, pattern):
                     images.append(filename)
+            for pattern in ['*B04_10m.jp2', '*B08_10m.jp2']:
+                if fnmatch.fnmatch(filename, pattern):
+                    images.append(filename)
     return images
 
 def create_ndvi_tif(file_paths_list, out_path):
@@ -525,35 +591,51 @@ def prepare_twi_df(ym_path, in_path, out_path, target_crs, year, field_name, cro
     twi_gdf = twi_gdf.set_crs(target_crs)
     return twi_gdf
 
-def prepare_ndvi_df(twi_gdf, in_path, out_path, target_crs, all_touched=False):
+def prepare_ndvi_df(twi_gdf, month, in_path, out_path, target_crs, all_touched=False):
     #prepare ndvi
     new_ndvi_file = reproject_raster(in_path, out_path, target_crs)
     ndvi_stats = rs.zonal_stats(twi_gdf, new_ndvi_file,  geojson_out=True, stats=['mean'], all_touched=all_touched)
     ndvi_twi_gdf = gpd.GeoDataFrame.from_features(ndvi_stats)
-    ndvi_twi_gdf.rename(columns={'mean':'mean_ndvi'}, inplace=True)
+    ndvi_twi_gdf.rename(columns={'mean':f'{month}_ndvi'}, inplace=True)
     #set projection again since it is lost for some reason
     ndvi_twi_gdf = ndvi_twi_gdf.set_crs(target_crs)
     return ndvi_twi_gdf
 
-def prepare_met_df(in_path, ndvi_twi_gdf, year):
+def prepare_met_df(in_path, ndvi_twi_gdf, year, header=7, precip_col='rain'):
     #get met data
-    met_df = pd.read_csv(in_path)
-    top10_precip_events_df = get_top_ten_days(met_df, year, 'year', 'rain (mm)')
-    adjacent_days_list = check_adjacent_days(top10_precip_events_df, 'day', 'rain (mm)')
-    top2 = get_top2_precip_events(top10_precip_events_df, adjacent_days_list, 'day', 'rain (mm)')
-    total_precip = sum_met_precip(in_path, year)
-    ndvi_twi_gdf.insert(3, 'top_precip_event_2', top2[1])
-    ndvi_twi_gdf.insert(3, 'top_precip_event_1', top2[0])
-    ndvi_twi_gdf.insert(3, 'yearly_precip', total_precip)
+    met_df = pd.read_csv(in_path, header=header, sep=' ')
+    if met_df.empty:
+        sys.exit('Dataframe is empty.')
+    met_df = met_df.drop([0])
+    data_type_dict = {
+        'year' : str,
+        'day' : int,
+        'radn' : float,
+        'maxt' : float,
+        'mint' : float,
+        'rain' : float
+    }
+    met_df = met_df.astype( data_type_dict )
+    top10_precip_events_df = get_top_ten_days(met_df, str(year), 'year', precip_col)
+    adjacent_days_list = check_adjacent_days(top10_precip_events_df, 'day', precip_col)
+    top2 = get_top2_precip_events(top10_precip_events_df, adjacent_days_list, 'day', precip_col)
+    total_precip = sum_met_precip(met_df, str(year), precip_col)
+    ndvi_twi_gdf.insert(3, 'top_prec_2', top2[1])
+    ndvi_twi_gdf.insert(3, 'top_prec_1', top2[0])
+    ndvi_twi_gdf.insert(3, 'tot_precip', total_precip)
     ndvi_twi_met_gdf = ndvi_twi_gdf
+    if ndvi_twi_met_gdf.empty:
+        print('ndvi_twi_met_gdf from prepare_met_df() is empty')
     return ndvi_twi_met_gdf
 
 def prepare_ssurgo_df(ndvi_twi_met_gdf, in_path, out_path, target_crs):
     #prepare ssurgo
     new_ssurgo_file = reproject_vector(in_path, out_path, target_crs)
     ssurgo_df = gpd.read_file(new_ssurgo_file)
-    ssurgo_df = ssurgo_df.drop(['objectid','shape_area', 'shape_length', 'spatialver'], axis=1)
+    ssurgo_df = ssurgo_df.drop(['objectid','shape_area', 'shape_length', 'shape_leng', 'spatialver'], axis=1, errors='ignore')
     ndvi_twi_met_ssurgo_gdf = gpd.sjoin(ndvi_twi_met_gdf, ssurgo_df)
+    if ndvi_twi_met_ssurgo_gdf.empty:
+        print('ndvi_twi_met_ssurgo_gdf from prepare_ssurgo_df() is empty')
     return ndvi_twi_met_ssurgo_gdf
 
 def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path, write_file):
@@ -568,6 +650,8 @@ def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, proje
                     num_files_removed += 1
         print(f"Removed {num_files_removed} old files.")
     apsim_df = parse_summary_output_field(apsim_files_path, year)
+    if apsim_df.empty:
+        print("No apsim files to parse for prepare_apsim_full_df()")
     #check if mukeys are all in both files
     mukeys = list(np.unique(apsim_df['mukey']))
     other_mukeys = list(np.unique(ndvi_twi_met_ssurgo_gdf['mukey']))
@@ -609,6 +693,11 @@ def csv_to_json(key_col, csv_file_path, json_file_path):
     with open(json_file_path, 'w', encoding='utf-8') as jsonf:
         jsonf.write(json.dumps(data, indent=4))
          
+def make_outdir_folders(field_list):
+    for i in field_list:
+        field_folder = os.path.join('out_files', i, 'shape_files')
+        if not os.path.exists(field_folder):
+            os.makedirs(field_folder)
 
 #convert date to number date (e.g., day of year = 127)
 day_of_year = datetime.now().timetuple().tm_yday

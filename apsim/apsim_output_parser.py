@@ -248,7 +248,7 @@ def parse_all_output_field(out_file_dir, year=2019): #, db_path, db_schema, db_t
     #     if_exists = 'replace',
     #     index = False )
 
-def parse_summary_output_field(out_file_dir, year=2019): #, db_path, db_schema, db_table
+def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_schema, db_table
     """Parses all .out files for a given field, does some summary stats, and returns df for last year
     Arguments:
         out_file_dir {str} -- path to folder that contains .out files
@@ -257,7 +257,11 @@ def parse_summary_output_field(out_file_dir, year=2019): #, db_path, db_schema, 
         [object] -- df with summary data for each .out file
     """
     #dbconn = db.connect_to_db(db_path)
-    file_list = glob.glob( out_file_dir + '/*.out')
+    out_dir = os.path.join(out_file_dir, '*.out')
+    file_list = glob.glob( out_dir)
+    if len(file_list) == 0:
+        print('No files found in directory.')
+        return
     push_data = []
     for file in file_list:
         # read file
@@ -282,7 +286,7 @@ def parse_summary_output_field(out_file_dir, year=2019): #, db_path, db_schema, 
         del daily_df['date']
         
         # cast explicit data types for processing
-        daily_df = daily_df.astype( {
+        data_type_dict = {
             'title' : 'string',
             'field' : 'string',
             'mukey' : 'string',
@@ -296,12 +300,18 @@ def parse_summary_output_field(out_file_dir, year=2019): #, db_path, db_schema, 
             'fertiliser': 'float64',
             #'n2o_atm': 'float64',
             'surfaceom_c': 'float64',
-            # 'subsurface_drain': 'float64',
-            # 'subsurface_drain_no3': 'float64',
             'leach_no3': 'float64',
             'corn_buac' : 'float64',
             'soy_buac' : 'float64'
-            } )
+            }
+        if swim == True:
+            swim_dict = {
+            'subsurface_drain': 'float64',
+            'subsurface_drain_no3': 'float64'
+            }
+            data_type_dict.update(swim_dict)
+        
+        daily_df = daily_df.astype( data_type_dict )
         df_year = daily_df.loc[daily_df['year'] == year].reset_index(drop=True)
         # perform simple analytics at time scale (here we only do year)
         data = {
@@ -320,10 +330,15 @@ def parse_summary_output_field(out_file_dir, year=2019): #, db_path, db_schema, 
             #'n2o_atm': df_year[ 'n2o_atm' ].sum(),
             'surfaceom_c_init': df_year[ 'surfaceom_c' ].values[0],
             'surfaceom_c_end': df_year[ 'surfaceom_c' ].values[-1],
-            #'subsurface_drain': df_year[ 'subsurface_drain' ].sum(),
-            #'subsurface_drain_no3': df_year[ 'subsurface_drain_no3' ].sum(),
             'leach_no3': df_year[ 'leach_no3' ].sum()
         }
+        if swim == True:
+            swim_data_dict = {
+            'subsurface_drain': df_year[ 'subsurface_drain' ].sum(),
+            'subsurface_drain_no3': df_year[ 'subsurface_drain_no3' ].sum()
+            }
+            data.update(swim_data_dict)
+        
         push_data.append(data)
     push_df = pd.DataFrame().append(push_data, ignore_index=True)
     return push_df

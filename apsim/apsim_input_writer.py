@@ -7,7 +7,6 @@ import fnmatch
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 import pandas as pd
-from analyses.munging import get_rotation
 import io
 import json
 import apsim.wrapper as apsim
@@ -457,6 +456,9 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                 'surfaceom_c',
                 'leach_no3'
                 ]
+            swim_outvars = ['subsurface_drain', 'subsurface_drain_no3']
+            if swim == True:
+                outvars = outvars + swim_outvars
             output_xml = apsim.set_output_variables( f'name_{field_name}_mukey_{soil_id}_rot_{rotation}_sim.out', outvars )
             area.append( output_xml )
             graph_no3 = [
@@ -606,9 +608,10 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
             if (sim_count % 20 == 0):
                 print(f'Finished with {sim_count} files.')
             if sim_count == total_sims:
-                print('Finished! All files created!')
+                print(f'Finished! All files created for {field_name}, {rotation}, {end_year}!')
+                print(' ')
         except:
-            print(f'File creation failed for APSIM run {sim_count} mukey {soil_id}')
+            print(f'File creation failed for {field_name}, {rotation}, {end_year}, mukey {soil_id}')
             traceback.print_exc()
             sim_count +=1
             continue
