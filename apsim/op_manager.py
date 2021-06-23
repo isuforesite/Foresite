@@ -285,9 +285,12 @@ class OpManager:
         #!!!!!!!!!!!!!!!!!!
 
         gradient_script_txt.text = """
-        corn_buac   = maize.yield * 0.0159/0.85  ! corn yield in bushels/acre@15% moisture
-        soy_buac   = soybean.yield * 0.0149/0.87  !  soybean yield in bushels/acre
-
+        corn_buac   = maize.yield * 0.0159 * 1.155  ! corn yield in bu/ac @ 15.5% moisture
+        soy_buac   = soybean.yield * 0.0149 * 1.13  !  soybean yield in bu/ac @ 13% moisture
+        soy_mktyd  = soybean.yield * 1.13 ! soybean yield in kg/ha @ 13% moisture
+        maz_mktyd  = maize.yield * 1.155 ! maize yield in kg/ha @ 15.5% moisture
+        soy_ymgha = soybean.yield * 1.13 / 1000 ! soybean yield in Mg/ha @ 13% moisture
+        maz_ymgha = maize.yield * 1.155 / 1000 ! maize yield in Mg/ha @ 15.5% moisture
         !bbc_gradient = -1
         !bbc_potential = {} - {}
         """.format(bbc_potential[0],bbc_potential[1])

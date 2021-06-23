@@ -227,6 +227,10 @@ def parse_all_output_field(out_file_dir, year=2019): #, db_path, db_schema, db_t
             'year': 'int64',
             'soybean_yield': 'float64',
             'maize_yield': 'float64',
+            'soy_mktyd': 'float64',
+            'maz_mktyd': 'float64',
+            'soy_ymgha': 'float64',
+            'maz_ymgha': 'float64',
             'soybean_biomass': 'float64',
             'maize_biomass': 'float64',
             'fertiliser': 'float64',
@@ -266,7 +270,7 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
     for file in file_list:
         # read file
         daily_df = pd.read_csv( file, header = 3, delim_whitespace = True )
-        daily_df = daily_df.drop( [0] )
+        daily_df = daily_df[1:]
         #get field name, mukey, and rotation with regex
         df_header = daily_df['title'][1]
         name_pattern = "name_(.*?)_mukey"
@@ -295,11 +299,15 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
             'year': 'int64',
             'soybean_yield': 'float64',
             'maize_yield': 'float64',
+            'soy_mktyd': 'float64',
+            'maz_mktyd': 'float64',
+            'soy_ymgha': 'float64',
+            'maz_ymgha': 'float64',
             'soybean_biomass': 'float64',
             'maize_biomass': 'float64',
             'fertiliser': 'float64',
             #'n2o_atm': 'float64',
-            'surfaceom_c': 'float64',
+            #'surfaceom_c': 'float64',
             'leach_no3': 'float64',
             'corn_buac' : 'float64',
             'soy_buac' : 'float64'
@@ -315,22 +323,26 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
         df_year = daily_df.loc[daily_df['year'] == year].reset_index(drop=True)
         # perform simple analytics at time scale (here we only do year)
         data = {
-            'title' : df_year['title'][1],
+            'title' : df_header,
             'field' : field,
             'mukey' : mukey,
             'rotation' : rotation,
             'year': year,
             'soybean_yield': df_year[ 'soybean_yield' ].max(),
             'maize_yield': df_year[ 'maize_yield' ].max(),
+            'soy_mktyd': df_year[ 'soy_mktyd' ].max(),
+            'maz_mktyd': df_year[ 'maz_mktyd' ].max(),
+            'soy_ymgha': df_year[ 'soy_ymgha' ].max(),
+            'maz_ymgha': df_year[ 'maz_ymgha' ].max(),
             'corn_buac' : df_year[ 'corn_buac' ].max(),
             'soy_buac' : df_year[ 'soy_buac' ].max(),
             'soybean_biomass': df_year[ 'soybean_biomass' ].max(),
             'maize_biomass': df_year[ 'maize_biomass' ].max(),
             'fertiliser': df_year[ 'fertiliser' ].sum(),
             #'n2o_atm': df_year[ 'n2o_atm' ].sum(),
-            'surfaceom_c_init': df_year[ 'surfaceom_c' ].values[0],
-            'surfaceom_c_end': df_year[ 'surfaceom_c' ].values[-1],
-            'leach_no3': df_year[ 'leach_no3' ].sum()
+            #'surfaceom_c_init': df_year[ 'surfaceom_c' ].values[0],
+            #'surfaceom_c_end': df_year[ 'surfaceom_c' ].values[-1],
+            'leach_no3': df_year[ 'leach_no3' ].sum(),
         }
         if swim == True:
             swim_data_dict = {
