@@ -18,3 +18,13 @@ eg 107 lb/ac * 1.121 = 120kg/ha
 
 ### Depths  
 Multiply depth in in. by 25.4 to get depth in mm.
+
+
+### NO3 <-> NO3-N
+The atomic weight of nitrogen is 14.0067 and the molar mass of nitrate anion (NO3-) is 62.0049 g/mole
+
+Therefore, to convert Nitrate-NO3 (mg/L) to Nitrate-N (mg/L):
+Nitrate-N (mg/L) = 0.2259 x Nitrate-NO3 (mg/L)
+
+And to convert Nitrate-N (mg/L) to Nitrate-NO3 (mg/L):
+Nitrate-NO3 (mg/L) = 4.4268 x Nitrate-N (mg/L)
