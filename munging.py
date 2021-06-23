@@ -36,39 +36,43 @@ def copy_met_file(src, dst):
         os.mkdir(dst)
     shutil.copy(src, dst)
 
-def create_apsim_files_from_dict(dbconn, runs_dict, met_folder, swim=False):
+def create_apsim_files_from_dict(dbconn, runs_dict, met_folder, swim=False, maize_xml=None, soy_xml=None, tar_folder=None):
     for i in runs_dict:
         rotation = runs_dict[i][0]
         runs_folder = runs_dict[i][1]
         field_prefix = runs_dict[i][2]
         met_file = runs_dict[i][3]
         end_year = runs_dict[i][4]
+        mgmt_folder = os.path.join(tar_folder, runs_dict[i][7])
         start_year = end_year - 3
         prior_year = end_year - 1
-        ssurgo_file = os.path.join('ssurgo', runs_dict[i][5])
+        ssurgo_file = os.path.join(tar_folder, 'ssurgo', runs_dict[i][5])
         ssurgo_gdf = gpd.read_file(ssurgo_file)
         mukeys = list(np.unique(ssurgo_gdf['mukey']))
+        out_path = os.path.join(tar_folder, 'apsim_files', runs_folder, str(end_year), rotation, 'met_files')
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
         if rotation == 'cfs':
-            corn_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_{rotation}_{end_year}.json')
-            soy_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_sfc_{prior_year}.json')
+            corn_mgmt = get_management_file(mgmt_folder, f'{field_prefix}_{rotation}_{end_year}.json')
+            soy_mgmt = get_management_file(mgmt_folder, f'{field_prefix}_sfc_{prior_year}.json')
             # print(json.dumps(corn_mgmt, indent=1))
             # print(json.dumps(soy_mgmt, indent=1))
         elif rotation == 'sfc':
-            soy_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_{rotation}_{end_year}.json')
-            corn_mgmt = get_management_file('mgmt_jsons', f'{field_prefix}_cfs_{prior_year}.json')
+            soy_mgmt = get_management_file(mgmt_folder, f'{field_prefix}_{rotation}_{end_year}.json')
+            corn_mgmt = get_management_file(mgmt_folder, f'{field_prefix}_cfs_{prior_year}.json')
             # print(json.dumps(soy_mgmt, indent=1))
             # print(json.dumps(corn_mgmt, indent=1))
-        create_mukey_runs(mukeys, dbconn, rotation, met_file, field_name=runs_folder, start_year=start_year, end_year=end_year, sfc_mgmt=soy_mgmt, cfs_mgmt=corn_mgmt, swim=swim)
-        met_src_path = os.path.join('met_files', met_folder, runs_dict[i][3])
-        met_tar_path = os.path.join('apsim_files', runs_folder, str(end_year), rotation, 'met_files')
+        create_mukey_runs(mukeys, dbconn, rotation, met_file, field_name=runs_folder, tar_folder=tar_folder, start_year=start_year, end_year=end_year, sfc_mgmt=soy_mgmt, cfs_mgmt=corn_mgmt, swim=swim, maize_xml=maize_xml, soy_xml=soy_xml)
+        met_src_path = os.path.join(tar_folder, 'met_files', met_folder, runs_dict[i][3])
+        met_tar_path = os.path.join(tar_folder, 'apsim_files', runs_folder, str(end_year), rotation, 'met_files')
         copy_met_file(met_src_path, met_tar_path)
     
-def run_apsim_files_from_dict(runs_dict):
+def run_apsim_files_from_dict(runs_dict, tar_folder):
     for i in runs_dict:
         runs_folder = runs_dict[i][1]
         end_year = runs_dict[i][4]
         rotation = runs_dict[i][0]
-        tar_apsim_files_path = os.path.join('apsim_files', runs_folder, str(end_year), rotation)
+        tar_apsim_files_path = os.path.join(tar_folder, 'apsim_files', runs_folder, str(end_year), rotation)
         analyses.run_apsim.run_all_simulations(apsim_files_path=tar_apsim_files_path)
         print(f'Finished running files in {runs_folder}, {end_year}, {rotation}')
         print(" ")
@@ -638,7 +642,7 @@ def prepare_ssurgo_df(ndvi_twi_met_gdf, in_path, out_path, target_crs):
         print('ndvi_twi_met_ssurgo_gdf from prepare_ssurgo_df() is empty')
     return ndvi_twi_met_ssurgo_gdf
 
-def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path, write_file):
+def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path, write_file, driver='GeoJSON'):
     #prepare apsim files
     if os.path.exists(project_out_path):
         num_files_removed = 0
@@ -663,7 +667,74 @@ def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, proje
     #merge to create full df
     full_df = ndvi_twi_met_ssurgo_gdf.merge(apsim_df, on="mukey")
     full_path = os.path.join(project_out_path, write_file)
-    full_df.to_file(full_path)
+    full_df.to_file(full_path, driver)
+
+#Field list is list with field names
+#e.g. biocentury_fields = ['ebilsland', 'kfinch', 'accola']
+def make_outdir_folders(field_list):
+    for i in field_list:
+        field_folder = os.path.join('out_files', i, 'fus')
+        if not os.path.exists(field_folder):
+            os.makedirs(field_folder)
+
+def create_sampled_geofile(field_list, driver):
+    for i in field_list:
+        field = json.loads( open( f'field_processing_jsons/{i}.json', 'r' ).read() )
+        field_folder = os.path.join('out_files', i, 'fus')
+        # if not os.path.exists(field_folder):
+        #     os.mkdirs(field_folder)
+        for i in field['year']:
+            field_name = field['field_name']
+            twi_path = field['twi_file']
+            ssurgo_path = field['ssurgo_file']
+            ym_file = field['year'][i]['ym_file']
+            rotation = field['year'][i]['rotation']
+            crop = field['year'][i]['crop']
+            apsim_folder = field['apsim_files']
+            met_file = field['met_file']
+            june_ndvi_date = f'{i}06'
+            july_ndvi_date = f'{i}07'
+            june_ndvi_file = ''
+            july_ndvi_file = ''
+            #set target crs from gpd df
+            ym_gdf = gpd.read_file(ym_file)
+            target_crs = ym_gdf.crs
+            #search for june and july ndvi files
+            for file in os.listdir(f'ndvi/{field_name}'):
+                if june_ndvi_date in file:
+                    june_ndvi_file = file
+                if july_ndvi_date in file:
+                    july_ndvi_file = file
+            if june_ndvi_file == '':
+                print(f'June NDVI file not found for {field_name} {i}.')
+                continue
+            if july_ndvi_file == '':
+                print(f'July NDVI file not found for {field_name} {i}.')
+                continue
+            #sample twi to ym file
+            twi_out_path = os.path.join('out_files', field_name, f'{field_name}_twi_26915.tif')
+            twi_gdf = prepare_twi_df(ym_file, twi_path, twi_out_path, target_crs, i, field_name, crop)
+            twi_gdf['fld_name'] = field_name
+            ## sample ndvi to new twi_gdf
+            #first get appropirate in and out paths
+            jun_ndvi_in_path = os.path.join('ndvi', field_name, june_ndvi_file)
+            jun_ndvi_out_path = os.path.join('out_files', field_name, f'{field_name}_ndvi_twi_jun_{i}_26915.tif')
+            jul_ndvi_in_path = os.path.join('ndvi', field_name, july_ndvi_file)
+            jul_ndvi_out_path = os.path.join('out_files', field_name, f'{field_name}_ndvi_twi_jul_{i}_26915.tif')
+            #then sample for june and for july
+            jun_ndvi_twi_gdf = prepare_ndvi_df(twi_gdf, 'jun', jun_ndvi_in_path, jun_ndvi_out_path, target_crs, all_touched=False)
+            jul_ndvi_twi_gdf = prepare_ndvi_df(jun_ndvi_twi_gdf, 'jul', jul_ndvi_in_path, jul_ndvi_out_path, target_crs, all_touched=False)
+            ## met
+            met_path = os.path.join('met_files', 'nasapwr', f'{met_file}')
+            ndvi_twi_met_gdf = prepare_met_df(met_path, jul_ndvi_twi_gdf, i, header=7, precip_col='rain')
+            ## ssurgo
+            ssurgo_out_path = os.path.join('out_files', field_name, f'{field_name}_ssurgo_26915.geojson')
+            ndvi_twi_met_ssurgo_gdf = prepare_ssurgo_df(ndvi_twi_met_gdf, ssurgo_path, ssurgo_out_path, target_crs)
+            ## apsim files
+            apsim_files_path = os.path.join('apsim_files', apsim_folder, i, rotation)
+            write_file = f'{field_name}_{crop}_{i}_full.geojson'
+            #driver = GeoJSON or ESRI Shapefile
+            prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, int(i), field_folder, write_file, driver=driver)
 
 ###---------------------------------------------------------###
 ###                       Miscellaneous                     ###
@@ -692,12 +763,6 @@ def csv_to_json(key_col, csv_file_path, json_file_path):
     # function to dump data
     with open(json_file_path, 'w', encoding='utf-8') as jsonf:
         jsonf.write(json.dumps(data, indent=4))
-         
-def make_outdir_folders(field_list):
-    for i in field_list:
-        field_folder = os.path.join('out_files', i, 'shape_files')
-        if not os.path.exists(field_folder):
-            os.makedirs(field_folder)
 
 #convert date to number date (e.g., day of year = 127)
 day_of_year = datetime.now().timetuple().tm_yday
