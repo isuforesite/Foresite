@@ -2,6 +2,9 @@
 
 import requests
 import pandas as pd
+import numpy as np
+import json
+import urllib
 import io
 import os
 from openpyxl import Workbook
@@ -10,6 +13,13 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 DAYMET_URL = 'https://daymet.ornl.gov/single-pixel/api/data'
 
+NASA_PARAMS = r'PRECTOT,ALLSKY_SFC_SW_DWN,T2M_MIN,T2M_MAX,WS2M'
+# PRECTOT = Precipitation (mm day-1) 
+# ALLSKY_SFC_SW_DWN = Radiation in Mj per square meter 
+# T2M_MIN = Mean daily min temp at 2 Meters (C)
+# T2M_MAX = Mean daily max temp at 2 Meters (C)
+# WS2M = Daily avg wind speed at 2m above earth surface
+NASA_URL = f"https://power.larc.nasa.gov/cgi-bin/v1/DataAccess.py?request=execute&identifier=SinglePoint&tempAverage=DAILY&parameters={NASA_PARAMS}&"
 
 
 class Weather:
@@ -169,17 +179,113 @@ class Weather:
         wth_df = wth_df[ [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain', 'snow',
             'vp', 'dayL' ] ]
 
-        headers = ' '.join( [ 'year', 'day', 'radn', 'maxt', 'mint', 'rain',
-            'snow', 'vp', 'dayL' ] )
-        units = ' '.join( [ '()', '()', '(MJ/m^2)', '(oC)', '(oC)', '(mm)', '(mm)',
-            '(kPa)', '(hours)' ] )
-
         self.data = wth_df
 
         return self
 
+    def from_nasa_power(self, lat, lon, start_year, end_year, output='CSV', output_folder="met_files/pwr"):
+        self.lat = lat
+        self.lon = lon
+        #output = 'CSV' # JSON, CSV, ASCII, ICASA, NETCDF
+        #request from API
+        full_url = f'{NASA_URL}startDate={start_year}0101&endDate={end_year}1231&lat={lat}&lon={lon}&outputList={output}&userCommunity=SSE'
+        json_response = json.loads(requests.get(full_url).content.decode('utf-8'))
+        #Selects the file URL from the JSON response
+        csv_request_url = json_response['outputs'][output.lower()]
+        # Download File to Folder
+        output_folder = os.path.join(output_folder)
+        #create folder if doesn't exist
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        output_file_location = os.path.join(output_folder, os.path.basename(csv_request_url))
+        urllib.request.urlretrieve(csv_request_url, output_file_location)
+        #read file and then delete
+        met_df = pd.read_csv(output_file_location, header=14)
+        #calculate daily mean temp
+        met_df = met_df.drop(['LAT', 'LON'], axis=1)
+        met_df['meant'] = round( ((met_df['T2M_MIN'] + met_df["T2M_MAX"]) / 2), 1)
+        #add day of year as 'day' column in 1-365 format for apsim
+        date_range = pd.date_range(f'01-01-{start_year}', f'12-31-{end_year}')
+        doy = date_range.dayofyear
+        met_df.insert(1, 'day', doy)
+        met_df = met_df.replace(-999, 'NA')
+        #remove original nasa power file and return dataframe
+        os.remove(output_file_location)
+        self.data = met_df
+        return self
+
+
+    def write_nasa_power_file(self, filepath, filename):
+        # dump met file with Windows line endings
+        if not os.path.exists(filepath):
+            os.makedirs(filepath)
+        full_path = os.path.join(filepath, filename)
+        if self.lat == None:
+            lat = ''
+            lon = ''
+        else:
+            lat = self.lat
+            lon = self.lon
+        if filepath:
+            headers = ' '.join( [ 'year', 'day', 'month', 'dom', 'rain', 'radn', 'mint', 'maxt', 'windsp', 'meant'] )
+            units = ' '.join( [ '()', '()', '()', '()', '(mm)', '(Mj/m^2)', '(oC)', '(oC)', '(m/s)', '(oC)' ] )
+        with open(full_path, 'w') as metfile:
+            metfile.write( '[weather.met.weather]\r\n' )
+            metfile.write( 'station = Nasa Power weather\r\n')
+            metfile.write( 'latitude = {} (DECIMAL DEGREES)\r\n'.format(
+                lat ) )
+            metfile.write( 'longitude = {} (DECIMAL DEGREES)\r\n'.format(
+                lon ) )
+            metfile.write( 'tav = ' +
+                str( round( np.mean(self.data['meant']), 1 ) ) + '\r\n' )
+            metfile.write( 'amp = ' +
+                str( round( np.mean(self.data['T2M_MAX'] - np.mean(self.data['T2M_MIN'])), 2 ) ) + '\r\n' )
+            metfile.write( '!Weather generated using ISU Foresite framework\r\n')
+            metfile.write( headers + '\r\n' )
+            metfile.write( units + '\r\n' )
+            metfile.write( self.data.to_csv( sep = ' ', header = False,
+                index = False, line_terminator='\r\n' ) )
+
+    def write_nasa_excel_file(self, filepath, filename):
+        if not os.path.exists(filepath):
+            os.makedirs(filepath)
+        full_path = os.path.join(filepath, filename)
+        if self.lat == None:
+            lat = ''
+            lon = ''
+        else:
+            lat = self.lat
+            lon = self.lon
+        #greene_df.to_excel('greene.xlsx', index=False)
+        wb = Workbook()
+        ws = wb.active
+        ws.alignment = Alignment(horizontal="left")
+        ws.append([ 'year', 'day', 'month', 'dom', 'rain', 'radn', 'mint', 'maxt', 'windsp', 'meant'])
+        ws.append([ '()', '()', '()', '()', '(mm)', '(MJ/m2)', '(oC)', '(oC)', '(m/s)', '(oC)' ])
+        for r in dataframe_to_rows(self.data, index=False, header=False):
+            ws.append(r)
+        for cells in ws.iter_rows():
+            for cell in cells:
+                cell.alignment = Alignment(horizontal="left")
+        ws.insert_rows(1)
+        ws['A1'] = '!Weather generated using C-CHANGE Foresite framework'
+        ws.insert_rows(1)
+        ws['A1'] = 'amp = ' + str(round( np.mean(self.data['T2M_MAX'] - np.mean(self.data['T2M_MIN'])), 2 ))
+        ws.insert_rows(1)
+        ws['A1'] = 'tav = ' + str(round( np.mean(self.data['meant']), 2 ))
+        ws.insert_rows(1)
+        ws['A1'] = f'longitude = {lon} (DECIMAL DEGREES)'
+        ws.insert_rows(1)
+        ws['A1'] = f'latitude = {lat} (DECIMAL DEGREES)'
+        ws.insert_rows(1)
+        ws['A1'] = 'station = NASA Power weather'
+        ws.insert_rows(1)
+        ws['A1'] = '[weather.met.weather]'
+        full_path = os.path.join(f'{full_path}.xlsx')
+        wb.save(full_path)
+
     ###
-    def write_met_file( self, filepath ):
+    def write_daymet_file( self, filepath ):
         # dump met file with Windows line endings
         if self.lat == None:
             lat = ''
@@ -358,40 +464,3 @@ Returns:
 def create_met(lat, long, start_year, end_year, filename, path='apsim_files/met_files'):
     weather_obj = Weather().from_daymet(lat, long, start_year, end_year)
     weather_obj.write_met_file(f'{path}/{filename}.met')
-
-
-#     """
-# Create all met files for each county in a given geometry.
-
-# Args:
-#     dbconn {database connection} -- connection to postgresql database
-#     counties {array/list} -- every county to be run on in the geometry
-#     table {str} -- name of the table within the database to get geometries from
-#     id_column {str} -- table column that has unique ids (in this case fips) for each county.
-#     geo_col {str} -- table column that has geometry.
-#     name_col {str} -- column that has the name for each county - can just use fips columns if no county names in table.
-
-# Returns:
-#     Met file for each county in counties.
-# """
-# def create_all_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry', name_col='county'):
-#     for i in counties:
-#         county = get_county(dbconn, table, i, geo_col)
-#         county_name = county[name_col][0].replace(" ", "_")
-#         print(f'Geopandas table for {county_name} county created.')
-#         centroid = get_centroid(county, id_col, geo_col)
-#         print(f'Centroid located at {centroid}.')
-#         create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
-#         print(f"Met file for {county_name}/{i} at location {centroid} created.")
-
-# def create_all_excel_met(dbconn, counties, table, id_col='fips', geo_col='wkb_geometry', name_col='county'):
-#     for i in counties:
-#         county = get_county(dbconn, table, i, geo_col)
-#         county_name = county[name_col][0].replace(" ", "_")
-#         print(f'Geopandas table for {county_name} county created.')
-#         centroid = get_centroid(county, id_col, geo_col)
-#         print(f'Centroid located at {centroid}.')
-#         if not os.path.exists(f'apsim_files/{county_name}/met_files'):
-#             os.makedirs(f'apsim_files/{county_name}/met_files')
-#         create_excel_met(centroid[0], centroid[1], 1980, 2020, county_name)
-#         print(f"Met file for {county_name}/{i} at location {centroid} created.")
