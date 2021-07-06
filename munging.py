@@ -8,7 +8,7 @@ from datetime import datetime
 import json
 import os
 import fnmatch
-import analyses.run_apsim
+import apsim.run_apsim
 import shutil
 from apsim.apsim_input_writer import create_mukey_runs
 from glob import glob
@@ -73,7 +73,7 @@ def run_apsim_files_from_dict(runs_dict, tar_folder):
         end_year = runs_dict[i][4]
         rotation = runs_dict[i][0]
         tar_apsim_files_path = os.path.join(tar_folder, 'apsim_files', runs_folder, str(end_year), rotation)
-        analyses.run_apsim.run_all_simulations(apsim_files_path=tar_apsim_files_path)
+        apsim.run_apsim.run_all_simulations(apsim_files_path=tar_apsim_files_path)
         print(f'Finished running files in {runs_folder}, {end_year}, {rotation}')
         print(" ")
 
@@ -677,7 +677,7 @@ def make_outdir_folders(field_list):
         if not os.path.exists(field_folder):
             os.makedirs(field_folder)
 
-def create_sampled_geofile(field_list, driver):
+def create_sampled_geofile(field_list, driver='GeoJSON'):
     for i in field_list:
         field = json.loads( open( f'field_processing_jsons/{i}.json', 'r' ).read() )
         field_folder = os.path.join('out_files', i, 'fus')
