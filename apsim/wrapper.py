@@ -4,7 +4,7 @@ import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
 import apsim.soils as soils
-import apsim.daymet as clim
+import apsim.weather as clim
 import apsim.database as db
 import apsim.op_manager as man
 
