@@ -10,7 +10,7 @@ import sys
 import threading
 import traceback
 import os
-import fnmatch 
+import fnmatch
 from multiprocessing import cpu_count
 from glob import glob
 from os import getcwd
@@ -163,7 +163,7 @@ def run_all_simulations (apsim_files_path="apsim_files\\Accola", n_cores=None):
         print(f"Removed {num_files_removed} old files.")
     else:
         print("Target folder does not exist.")
-        quit
+        return
     #get system number of cores if not specified
     if n_cores == None:
         n_cores = cpu_count() - 2
@@ -172,23 +172,16 @@ def run_all_simulations (apsim_files_path="apsim_files\\Accola", n_cores=None):
     #combine working dir and apsim file paths to create complete file paths
     wd = getcwd()
     time1 = perf_counter()
-    apsim_full_path = os.path.join(apsim_files_path, '*.apsim')
-    apsim_files = glob(apsim_full_path)
+    apsim_files = glob(apsim_files_path + "\\*.apsim")
     complete_apsim_paths = [wd + f'\\{apsim_file}' for apsim_file in apsim_files]
     #convert list of .apsim files to .sim files
     convert_all_apsim_to_sim(complete_apsim_paths, num_cores=n_cores)
     
     #get list of all converted .sim files and create their full paths
-    sim_full_path = os.path.join(apsim_files_path, '*sim')
-    sim_files = glob(sim_full_path)
+    sim_files = glob(apsim_files_path + "\\*.sim")
     complete_sim_paths = [wd + f'\\{sim_file}' for sim_file in sim_files]
     #run .sim files
     run_many_sims(complete_sim_paths, num_cores=n_cores)
-    for filename in os.listdir(runs_folder_path):
-            for pattern in ['*.tmp']:
-                if fnmatch.fnmatch(filename, pattern):
-                    tmp_file = os.path.join(runs_folder_path, filename)
-                    os.remove(tmp_file)
     time2 = perf_counter()
     print(f'Processing time: {time2 - time1:0.4f} seconds')
 
