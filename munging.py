@@ -536,19 +536,44 @@ def unzip_sentinel_images(image_path, img_title):
 ###                           NDVI                          ###
 ###---------------------------------------------------------###
 
-def locate_NIR_RED_images(in_path):
+def get_image_bands(in_path, img_bands=['*B04.jp2', '*B08.jp2', '*B04_10m.jp2', '*B08_10m.jp2']):
+    # finds files with desired band extensions
+    # bands are blue = 2, green = 3, red = 4, nir = 8
     #get all files with .jp2 in folder
     file_list = glob(in_path + '/**/*.jp2', recursive=True)
     images = []
     #find and return the band 4 and band 8 images
     for filename in file_list:
-            for pattern in ['*B04.jp2', '*B08.jp2']:
-                if fnmatch.fnmatch(filename, pattern):
-                    images.append(filename)
-            for pattern in ['*B04_10m.jp2', '*B08_10m.jp2']:
+            for pattern in img_bands:
                 if fnmatch.fnmatch(filename, pattern):
                     images.append(filename)
     return images
+
+def get_TCI_image(in_path):
+    # finds TCI (RGB image) file in directory
+    file_list = glob(in_path + '/**/*.jp2', recursive=True)
+    images = []
+    #find and return the band 4 and band 8 images
+    for filename in file_list:
+            for pattern in ['*TCI.jp2']:
+                if fnmatch.fnmatch(filename, pattern):
+                    images.append(filename)
+    return images
+
+def create_rgb_tif(file_paths_list, out_path):
+    #b2 is blue band; b3 is green; b4 is red
+    b2_file = [file for file in file_paths_list if 'B02' in file]
+    b3_file = [file for file in file_paths_list if 'B03' in file]
+    b4_file = [file for file in file_paths_list if 'B04' in file]
+    b2 = rio.open(b2_file[0])
+    b3 = rio.open(b3_file[0])
+    b4 = rio.open(b4_file[0])
+    with rio.open(out_path, 'w',driver='Gtiff', width=b4.width, height=b4.height, 
+              count=3,crs=b4.crs,transform=b4.transform, dtype=b4.dtypes[0]) as rgb:
+        rgb.write(b2.read(1),1) 
+        rgb.write(b3.read(1),2) 
+        rgb.write(b4.read(1),3) 
+        rgb.close()
 
 def create_ndvi_tif(file_paths_list, out_path):
     #b4 is red band; b8 is nir band
@@ -558,14 +583,68 @@ def create_ndvi_tif(file_paths_list, out_path):
     b8 = rio.open(b8_file[0])
     red_b = b4.read()
     nir_b = b8.read()
-    ndvi = (nir_b.astype(float)-red_b.astype(float))/(nir_b+red_b)
+    ndvi = (nir_b.astype(float) - red_b.astype(float))/(nir_b.astype(float) + red_b.astype(float))
     meta = b4.meta
     meta.update(driver='GTiff')
     meta.update(dtype=rio.float32)
 
     with rio.open(out_path, 'w', **meta) as dst:
-        dst.write(ndvi.astype(rio.float32))
+        dst.write(ndvi)
 
+def create_gci_tif(file_paths_list, out_path):
+    # green chlorophyll index
+    # b3 is green band; b8 is nir band
+    # nir / green - 1
+    b3_file = [file for file in file_paths_list if 'B03' in file]
+    b8_file = [file for file in file_paths_list if 'B08' in file]
+    b3 = rio.open(b3_file[0])
+    b8 = rio.open(b8_file[0])
+    green_b = b3.read()
+    nir_b = b8.read()
+    gci = (nir_b.astype(float) / green_b.astype(float)) - 1
+    meta = b3.meta
+    meta.update(driver='GTiff')
+    meta.update(dtype=rio.float64)
+
+    with rio.open(out_path, 'w', **meta) as dst:
+        dst.write(gci)
+
+def create_savi_tif(file_paths_list, out_path):
+    # soil adjusted vegetation index
+    # b4 is red band; b8 is nir band
+    b4_file = [file for file in file_paths_list if 'B04' in file]
+    b8_file = [file for file in file_paths_list if 'B08' in file]
+    b4 = rio.open(b4_file[0])
+    b8 = rio.open(b8_file[0])
+    red_b = b4.read()
+    nir_b = b8.read()
+    savi = (nir_b.astype(float) - red_b.astype(float)) / (nir_b + red_b + 0.428) * (1.428)
+    meta = b4.meta
+    meta.update(driver='GTiff')
+    meta.update(dtype=rio.float32)
+
+    with rio.open(out_path, 'w', **meta) as dst:
+        dst.write(savi.astype(rio.float32))
+
+def create_evi_tif(file_paths_list, out_path):
+    # enhanced vegetation index
+    # b2 is blue; b4 is red band; b8 is nir band
+    b2_file = [file for file in file_paths_list if 'B02' in file]
+    b4_file = [file for file in file_paths_list if 'B04' in file]
+    b8_file = [file for file in file_paths_list if 'B08' in file]
+    b2 = rio.open(b2_file[0])
+    b4 = rio.open(b4_file[0])
+    b8 = rio.open(b8_file[0])
+    blue_b = b2.read()
+    red_b = b4.read()
+    nir_b = b8.read()
+    evi = 2.5 * ((nir_b - red_b) / ((nir_b + 6) * (red_b - 7.5) * (blue_b + 1)))
+    meta = b4.meta
+    meta.update(driver='GTiff')
+    meta.update(dtype=rio.float32)
+
+    with rio.open(out_path, 'w', **meta) as dst:
+        dst.write(evi.astype(rio.float32))
 
 def clip_raster(in_file, mask_layer, out_path):
     #crop ndvi image to field boundary
