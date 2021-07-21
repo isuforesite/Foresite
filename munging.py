@@ -684,7 +684,17 @@ def prepare_ndvi_df(twi_gdf, month, in_path, out_path, target_crs, all_touched=F
     ndvi_twi_gdf = ndvi_twi_gdf.set_crs(target_crs)
     return ndvi_twi_gdf
 
-def prepare_met_df(in_path, ndvi_twi_gdf, year, header=7, precip_col='rain'):
+def prepare_gci_df(ndvi_twi_gdf, month, in_path, out_path, target_crs, all_touched=False):
+    #prepare ndvi
+    new_gci_file = reproject_raster(in_path, out_path, target_crs)
+    gci_stats = rs.zonal_stats(ndvi_twi_gdf, new_gci_file,  geojson_out=True, stats=['mean'], all_touched=all_touched)
+    gci_ndvi_twi_gdf = gpd.GeoDataFrame.from_features(gci_stats)
+    gci_ndvi_twi_gdf.rename(columns={'mean':f'{month}_gci'}, inplace=True)
+    #set projection again since it is lost for some reason
+    gci_ndvi_twi_gdf = gci_ndvi_twi_gdf.set_crs(target_crs)
+    return gci_ndvi_twi_gdf
+
+def prepare_met_df(in_path, gci_ndvi_twi_gdf, year, header=7, precip_col='rain'):
     #get met data
     met_df = pd.read_csv(in_path, header=header, sep=' ')
     if met_df.empty:
@@ -703,25 +713,25 @@ def prepare_met_df(in_path, ndvi_twi_gdf, year, header=7, precip_col='rain'):
     adjacent_days_list = check_adjacent_days(top10_precip_events_df, 'day', precip_col)
     top2 = get_top2_precip_events(top10_precip_events_df, adjacent_days_list, 'day', precip_col)
     total_precip = sum_met_precip(met_df, str(year), precip_col)
-    ndvi_twi_gdf.insert(3, 'top_prec_2', top2[1])
-    ndvi_twi_gdf.insert(3, 'top_prec_1', top2[0])
-    ndvi_twi_gdf.insert(3, 'tot_precip', total_precip)
-    ndvi_twi_met_gdf = ndvi_twi_gdf
-    if ndvi_twi_met_gdf.empty:
+    gci_ndvi_twi_gdf.insert(3, 'top_prec_2', top2[1])
+    gci_ndvi_twi_gdf.insert(3, 'top_prec_1', top2[0])
+    gci_ndvi_twi_gdf.insert(3, 'tot_precip', total_precip)
+    gci_ndvi_twi_met_gdf = gci_ndvi_twi_gdf
+    if gci_ndvi_twi_met_gdf.empty:
         print('ndvi_twi_met_gdf from prepare_met_df() is empty')
-    return ndvi_twi_met_gdf
+    return gci_ndvi_twi_met_gdf
 
-def prepare_ssurgo_df(ndvi_twi_met_gdf, in_path, out_path, target_crs):
+def prepare_ssurgo_df(gci_ndvi_twi_met_gdf, in_path, out_path, target_crs):
     #prepare ssurgo
     new_ssurgo_file = reproject_vector(in_path, out_path, target_crs)
     ssurgo_df = gpd.read_file(new_ssurgo_file)
     ssurgo_df = ssurgo_df.drop(['objectid','shape_area', 'shape_length', 'shape_leng', 'spatialver'], axis=1, errors='ignore')
-    ndvi_twi_met_ssurgo_gdf = gpd.sjoin(ndvi_twi_met_gdf, ssurgo_df)
-    if ndvi_twi_met_ssurgo_gdf.empty:
+    gci_ndvi_twi_met_ssurgo_gdf = gpd.sjoin(gci_ndvi_twi_met_gdf, ssurgo_df)
+    if gci_ndvi_twi_met_ssurgo_gdf.empty:
         print('ndvi_twi_met_ssurgo_gdf from prepare_ssurgo_df() is empty')
-    return ndvi_twi_met_ssurgo_gdf
+    return gci_ndvi_twi_met_ssurgo_gdf
 
-def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path, write_file, driver='GeoJSON'):
+def prepare_apsim_full_df(gci_ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, project_out_path, write_file, driver='GeoJSON'):
     #prepare apsim files
     if os.path.exists(project_out_path):
         num_files_removed = 0
@@ -737,14 +747,14 @@ def prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, year, proje
         print("No apsim files to parse for prepare_apsim_full_df()")
     #check if mukeys are all in both files
     mukeys = list(np.unique(apsim_df['mukey']))
-    other_mukeys = list(np.unique(ndvi_twi_met_ssurgo_gdf['mukey']))
+    other_mukeys = list(np.unique(gci_ndvi_twi_met_ssurgo_gdf['mukey']))
     if mukeys == other_mukeys:
         print('Mukeys are equal')
     else:
         print('Not all mukeys same in both files.')
         pass
     #merge to create full df
-    full_df = ndvi_twi_met_ssurgo_gdf.merge(apsim_df, on="mukey")
+    full_df = gci_ndvi_twi_met_ssurgo_gdf.merge(apsim_df, on="mukey")
     full_path = os.path.join(project_out_path, write_file)
     full_df.to_file(full_path, driver)
 
@@ -775,6 +785,11 @@ def create_sampled_geofile(field_list, driver='GeoJSON'):
             july_ndvi_date = f'{i}07'
             june_ndvi_file = ''
             july_ndvi_file = ''
+            #gci
+            june_gci_date = f'jun_{i}'
+            july_gci_date = f'jul_{i}'
+            june_gci_file = ''
+            july_gci_file = ''
             #set target crs from gpd df
             ym_gdf = gpd.read_file(ym_file)
             target_crs = ym_gdf.crs
@@ -790,11 +805,23 @@ def create_sampled_geofile(field_list, driver='GeoJSON'):
             if july_ndvi_file == '':
                 print(f'July NDVI file not found for {field_name} {i}.')
                 continue
+            #search for june and july gci files
+            for file in os.listdir(f'gci/{field_name}'):
+                if june_gci_date in file:
+                    june_gci_file = file
+                if july_gci_date in file:
+                    july_gci_file = file
+            if june_gci_file == '':
+                print(f'June GCI file not found for {field_name} {i}.')
+                continue
+            if july_gci_file == '':
+                print(f'July GCI file not found for {field_name} {i}.')
+                continue
             #sample twi to ym file
             twi_out_path = os.path.join('out_files', field_name, f'{field_name}_twi_26915.tif')
             twi_gdf = prepare_twi_df(ym_file, twi_path, twi_out_path, target_crs, i, field_name, crop)
             twi_gdf['fld_name'] = field_name
-            ## sample ndvi to new twi_gdf
+            ## sample ndvi
             #first get appropirate in and out paths
             jun_ndvi_in_path = os.path.join('ndvi', field_name, june_ndvi_file)
             jun_ndvi_out_path = os.path.join('out_files', field_name, f'{field_name}_ndvi_twi_jun_{i}_26915.tif')
@@ -803,17 +830,26 @@ def create_sampled_geofile(field_list, driver='GeoJSON'):
             #then sample for june and for july
             jun_ndvi_twi_gdf = prepare_ndvi_df(twi_gdf, 'jun', jun_ndvi_in_path, jun_ndvi_out_path, target_crs, all_touched=False)
             jul_ndvi_twi_gdf = prepare_ndvi_df(jun_ndvi_twi_gdf, 'jul', jul_ndvi_in_path, jul_ndvi_out_path, target_crs, all_touched=False)
+            ## sample gci
+            #first get appropirate in and out paths
+            jun_gci_in_path = os.path.join('gci', field_name, june_gci_file)
+            jun_gci_out_path = os.path.join('out_files', field_name, f'{field_name}_gci_ndvi_twi_jun_{i}_26915.tif')
+            jul_gci_in_path = os.path.join('gci', field_name, july_gci_file)
+            jul_gci_out_path = os.path.join('out_files', field_name, f'{field_name}_gci_ndvi_twi_jul_{i}_26915.tif')
+            #then sample for june and for july
+            jun_gci_twi_gdf = prepare_gci_df(jul_ndvi_twi_gdf, 'jun', jun_gci_in_path, jun_gci_out_path, target_crs, all_touched=False)
+            jul_gci_ndvi_twi_gdf = prepare_gci_df(jun_gci_twi_gdf, 'jul', jul_gci_in_path, jul_gci_out_path, target_crs, all_touched=False)
             ## met
             met_path = os.path.join('met_files', 'nasapwr', f'{met_file}')
-            ndvi_twi_met_gdf = prepare_met_df(met_path, jul_ndvi_twi_gdf, i, header=7, precip_col='rain')
+            gci_ndvi_twi_met_gdf = prepare_met_df(met_path, jul_gci_ndvi_twi_gdf, i, header=7, precip_col='rain')
             ## ssurgo
             ssurgo_out_path = os.path.join('out_files', field_name, f'{field_name}_ssurgo_26915.geojson')
-            ndvi_twi_met_ssurgo_gdf = prepare_ssurgo_df(ndvi_twi_met_gdf, ssurgo_path, ssurgo_out_path, target_crs)
+            gci_ndvi_twi_met_ssurgo_gdf = prepare_ssurgo_df(gci_ndvi_twi_met_gdf, ssurgo_path, ssurgo_out_path, target_crs)
             ## apsim files
             apsim_files_path = os.path.join('apsim_files', apsim_folder, i, rotation)
             write_file = f'{field_name}_{crop}_{i}_full.geojson'
             #driver = GeoJSON or ESRI Shapefile
-            prepare_apsim_full_df(ndvi_twi_met_ssurgo_gdf, apsim_files_path, int(i), field_folder, write_file, driver=driver)
+            prepare_apsim_full_df(gci_ndvi_twi_met_ssurgo_gdf, apsim_files_path, int(i), field_folder, write_file, driver=driver)
 
 ###---------------------------------------------------------###
 ###                       Miscellaneous                     ###
