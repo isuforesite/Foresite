@@ -776,13 +776,14 @@ def create_sampled_geofile(field_list, driver='GeoJSON'):
             field_name = field['field_name']
             twi_path = field['twi_file']
             ssurgo_path = field['ssurgo_file']
+            fus_path = field['year'][i]['fus_path']
             ym_file = field['year'][i]['ym_file']
             rotation = field['year'][i]['rotation']
             crop = field['year'][i]['crop']
             apsim_folder = field['apsim_files']
             met_file = field['met_file']
-            june_ndvi_date = f'{i}06'
-            july_ndvi_date = f'{i}07'
+            june_ndvi_date = f'jun_{i}'
+            july_ndvi_date = f'jul_{i}'
             june_ndvi_file = ''
             july_ndvi_file = ''
             #gci
@@ -850,6 +851,9 @@ def create_sampled_geofile(field_list, driver='GeoJSON'):
             write_file = f'{field_name}_{crop}_{i}_full.geojson'
             #driver = GeoJSON or ESRI Shapefile
             prepare_apsim_full_df(gci_ndvi_twi_met_ssurgo_gdf, apsim_files_path, int(i), field_folder, write_file, driver=driver)
+            fus_src = os.path.join(field_folder, write_file)
+            fus_dst = os.path.join(fus_path, write_file)
+            shutil.copy(fus_src, fus_dst)
 
 ###---------------------------------------------------------###
 ###                       Miscellaneous                     ###
