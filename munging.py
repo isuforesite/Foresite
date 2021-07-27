@@ -583,13 +583,13 @@ def create_ndvi_tif(file_paths_list, out_path):
     b8 = rio.open(b8_file[0])
     red_b = b4.read()
     nir_b = b8.read()
-    ndvi = (nir_b.astype(float) - red_b.astype(float))/(nir_b.astype(float) + red_b.astype(float))
+    ndvi = (nir_b.astype(np.float32) - red_b.astype(np.float32))/(nir_b.astype(np.float32) + red_b.astype(np.float32))
     meta = b4.meta
     meta.update(driver='GTiff')
     meta.update(dtype=rio.float32)
 
     with rio.open(out_path, 'w', **meta) as dst:
-        dst.write(ndvi)
+        dst.write(ndvi.astype(rio.float32))
 
 def create_gci_tif(file_paths_list, out_path):
     # green chlorophyll index
@@ -601,13 +601,13 @@ def create_gci_tif(file_paths_list, out_path):
     b8 = rio.open(b8_file[0])
     green_b = b3.read()
     nir_b = b8.read()
-    gci = (nir_b.astype(float) / green_b.astype(float)) - 1
+    gci = (nir_b.astype(np.float32) / green_b.astype(np.float32)) - 1
     meta = b3.meta
     meta.update(driver='GTiff')
-    meta.update(dtype=rio.float64)
+    meta.update(dtype=rio.float32)
 
     with rio.open(out_path, 'w', **meta) as dst:
-        dst.write(gci)
+        dst.write(gci.astype(rio.float32))
 
 def create_savi_tif(file_paths_list, out_path):
     # soil adjusted vegetation index
@@ -618,7 +618,7 @@ def create_savi_tif(file_paths_list, out_path):
     b8 = rio.open(b8_file[0])
     red_b = b4.read()
     nir_b = b8.read()
-    savi = (nir_b.astype(float) - red_b.astype(float)) / (nir_b + red_b + 0.428) * (1.428)
+    savi = (nir_b.astype(np.float32) - red_b.astype(np.float32)) / (nir_b.astype(np.float32) + red_b.astype(np.float32) + 0.428) * (1.428)
     meta = b4.meta
     meta.update(driver='GTiff')
     meta.update(dtype=rio.float32)
@@ -638,7 +638,7 @@ def create_evi_tif(file_paths_list, out_path):
     blue_b = b2.read()
     red_b = b4.read()
     nir_b = b8.read()
-    evi = 2.5 * ((nir_b - red_b) / ((nir_b + 6) * (red_b - 7.5) * (blue_b + 1)))
+    evi = 2.5 * ((nir_b.astype(np.float32) - red_b.astype(np.float32)) / ((nir_b.astype(np.float32) + 6) * (red_b.astype(np.float32) - 7.5) * (blue_b.astype(np.float32) + 1)))
     meta = b4.meta
     meta.update(driver='GTiff')
     meta.update(dtype=rio.float32)
