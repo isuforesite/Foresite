@@ -409,10 +409,23 @@ class Soil:
         set_value_by_depth( soil_df, 'FInert', 120.0, None, 0.90, None )
 
         #SWCON
-        soil_df.loc[ ( soil_df[ 'claytotal_r' ] >= 55 ), 'SWCON' ] = 0.3
-        soil_df.loc[ ( soil_df[ 'sandtotal_r' ] >= 85 ), 'SWCON' ] = 0.7
-        soil_df.loc[ ( soil_df[ 'claytotal_r' ] < 55 ) &
-            ( soil_df[ 'sandtotal_r' ] < 85 ), 'SWCON' ] = 0.5
+        #from rafa's appsurgo https://github.com/rmartinezferia/APssurgo/blob/master/R/calcSSURGO.R
+        #horizon$PO <- 1-horizon$bd/2.65
+        #horizon$SWCON <- (horizon$PO-horizon$dul)/horizon$PO
+        #soil_df, var_name, min_depth, max_depth, value
+        soil_df['PO'] = 1-(soil_df[ 'BD' ]/2.65)
+        swcon_eq = lambda df: (df['PO']-df['DUL'])/df['PO']
+        set_value_by_depth( soil_df, 'SWCON', 0.0, 20.0, None, swcon_eq )
+        set_value_by_depth( soil_df, 'SWCON', 20.0, 30.0, None, swcon_eq )
+        set_value_by_depth( soil_df, 'SWCON', 30.0, 60.0, None, swcon_eq )
+        set_value_by_depth( soil_df, 'SWCON', 60.0, 90.0, None, swcon_eq )
+        set_value_by_depth( soil_df, 'SWCON', 90.0, 120.0, None, swcon_eq )
+        set_value_by_depth( soil_df, 'SWCON', 120.0, 150, None, swcon_eq )
+        set_value_by_depth( soil_df, 'SWCON', 150.0, 200, None, swcon_eq )
+        # soil_df.loc[ ( soil_df[ 'claytotal_r' ] >= 55 ), 'SWCON' ] = 0.3
+        # soil_df.loc[ ( soil_df[ 'sandtotal_r' ] >= 85 ), 'SWCON' ] = 0.7
+        # soil_df.loc[ ( soil_df[ 'claytotal_r' ] < 55 ) &
+        #     ( soil_df[ 'sandtotal_r' ] < 85 ), 'SWCON' ] = 0.5
 
         ### set direct access to apsim properties
         self.FBiom = soil_df[ 'FBiom' ]
