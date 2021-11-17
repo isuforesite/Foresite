@@ -13,13 +13,13 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 DAYMET_URL = 'https://daymet.ornl.gov/single-pixel/api/data'
 
-NASA_PARAMS = r'PRECTOT,ALLSKY_SFC_SW_DWN,T2M_MIN,T2M_MAX,WS2M'
+nasa_params = r'PRECTOTCORR,ALLSKY_SFC_SW_DWN,T2M_MIN,T2M_MAX,WS2M'
 # PRECTOT = Precipitation (mm day-1) 
 # ALLSKY_SFC_SW_DWN = Radiation in Mj per square meter 
 # T2M_MIN = Mean daily min temp at 2 Meters (C)
 # T2M_MAX = Mean daily max temp at 2 Meters (C)
 # WS2M = Daily avg wind speed at 2m above earth surface
-NASA_URL = f"https://power.larc.nasa.gov/cgi-bin/v1/DataAccess.py?request=execute&identifier=SinglePoint&tempAverage=DAILY&parameters={NASA_PARAMS}&"
+NASA_URL = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters={nasa_params}&community=SB&"
 
 
 class Weather:
@@ -183,11 +183,12 @@ class Weather:
 
         return self
 
-    def from_nasa_power(self, lat, lon, start_year, end_year, output='CSV', output_folder="met_files/pwr"):
+    def from_nasa_power(self, lat, lon, start_date=19900101, end_date=20201231, format='JSON'):
         self.lat = lat
         self.lon = lon
-        #output = 'CSV' # JSON, CSV, ASCII, ICASA, NETCDF
+        #format = 'CSV' # JSON, CSV, ASCII, ICASA, NETCDF
         #request from API
+        nasa_params = r'PRECTOTCORR,ALLSKY_SFC_SW_DWN,T2M_MIN,T2M_MAX,WS2M'
         full_url = f'{NASA_URL}startDate={start_year}0101&endDate={end_year}1231&lat={lat}&lon={lon}&outputList={output}&userCommunity=SSE'
         json_response = json.loads(requests.get(full_url).content.decode('utf-8'))
         #Selects the file URL from the JSON response
