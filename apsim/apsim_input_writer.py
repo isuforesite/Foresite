@@ -202,7 +202,9 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                 'soy_buac',
                 'fertiliser',
                 'surfaceom_c',
-                'leach_no3'
+                'leach_no3',
+                'Rain',
+                'drain'
                 ]
             swim_outvars = ['subsurface_drain', 'subsurface_drain_no3']
             if swim == True:
@@ -212,7 +214,9 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
             graph_no3 = [
                 'Cumulative subsurface_drain',
                 'Cumulative subsurface_drain_no3',
-                'Cumulative leach_no3'
+                'Cumulative leach_no3',
+                'Cumulative Rain',
+                'Cumulative drain'
             ]
             graph_yield = [
                 'soybean_yield',
@@ -241,7 +245,9 @@ def create_mukey_runs(soils_list, dbconn, rotation, met_name, field_name='field'
                 'surfaceom_c',
                 'subsurface_drain',
                 'subsurface_drain_no3',
-                'leach_no3'
+                'leach_no3',
+                'Rain',
+                'drain'
             ]
 
             output_xml.append( apsim.add_xy_graph( 'Date', graph_no3, 'no3' ) )
