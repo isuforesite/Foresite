@@ -457,7 +457,7 @@ def parse_summary_output(out_file, year=None, swim=False): #, db_path, db_schema
             'subsurface_drain_no3': df_year[ 'subsurface_drain_no3' ].sum()
             }
             data.update(swim_data_dict)
-            push_data.append(data)
+        push_data.append(data)
     else:
         years = daily_df['year'].unique()
         for i in years:
