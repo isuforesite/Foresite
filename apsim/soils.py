@@ -484,7 +484,8 @@ class Soil:
 
         add_crop_xml( water, 'maize', self )
         add_crop_xml( water, 'soybean', self )
-        add_crop_xml( water, 'wheat', self )
+        add_crop_xml( water, 'AgPasture', self )
+        add_crop_xml( water, 'AgPastureNewSpecies', self )
 
         add_subelements( water, 'Thickness' )
 
