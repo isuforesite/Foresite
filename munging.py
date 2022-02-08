@@ -36,7 +36,7 @@ def copy_met_file(src, dst):
         os.mkdir(dst)
     shutil.copy(src, dst)
 
-def create_apsim_files_from_dict(dbconn, runs_dict, met_folder, swim=False, maize_xml=None, soy_xml=None, tar_folder=None):
+def create_apsim_files_from_dict(dbconn, runs_dict, met_folder, swim=False, saxton=False, maize_xml=None, soy_xml=None, tar_folder=None):
     for i in runs_dict:
         rotation = runs_dict[i][0]
         runs_folder = runs_dict[i][1]
@@ -62,7 +62,7 @@ def create_apsim_files_from_dict(dbconn, runs_dict, met_folder, swim=False, maiz
             corn_mgmt = get_management_file(mgmt_folder, f'{field_prefix}_cfs_{prior_year}.json')
             # print(json.dumps(soy_mgmt, indent=1))
             # print(json.dumps(corn_mgmt, indent=1))
-        create_mukey_runs(mukeys, dbconn, rotation, met_file, field_name=runs_folder, tar_folder=tar_folder, start_year=start_year, end_year=end_year, sfc_mgmt=soy_mgmt, cfs_mgmt=corn_mgmt, swim=swim, maize_xml=maize_xml, soy_xml=soy_xml)
+        create_mukey_runs(mukeys, dbconn, rotation, met_file, field_name=runs_folder, tar_folder=tar_folder, start_year=start_year, end_year=end_year, sfc_mgmt=soy_mgmt, cfs_mgmt=corn_mgmt, swim=swim, saxton=saxton, maize_xml=maize_xml, soy_xml=soy_xml)
         met_src_path = os.path.join(tar_folder, 'met_files', met_folder, runs_dict[i][3])
         met_tar_path = os.path.join(tar_folder, 'apsim_files', runs_folder, str(end_year), rotation, 'met_files')
         copy_met_file(met_src_path, met_tar_path)
@@ -536,7 +536,7 @@ def unzip_sentinel_images(image_path, img_title):
 ###                           NDVI                          ###
 ###---------------------------------------------------------###
 
-def get_image_bands(in_path, img_bands=['*B04.jp2', '*B08.jp2', '*B04_10m.jp2', '*B08_10m.jp2']):
+def get_image_bands(in_path, img_bands=['*B04.jp2', '*B08.jp2', '*B04_10m.jp2', '*B08_10m.jp2']) -> list:
     # finds files with desired band extensions
     # bands are blue = 2, green = 3, red = 4, nir = 8
     #get all files with .jp2 in folder
@@ -547,10 +547,12 @@ def get_image_bands(in_path, img_bands=['*B04.jp2', '*B08.jp2', '*B04_10m.jp2', 
             for pattern in img_bands:
                 if fnmatch.fnmatch(filename, pattern):
                     images.append(filename)
+    #returns list of desired images with paths
     return images
 
-def get_TCI_image(in_path):
+def get_TCI_image(in_path) -> list:
     # finds TCI (RGB image) file in directory
+    # basically just for plotting color image
     file_list = glob(in_path + '/**/*.jp2', recursive=True)
     images = []
     #find and return the band 4 and band 8 images
@@ -576,6 +578,7 @@ def create_rgb_tif(file_paths_list, out_path):
         rgb.close()
 
 def create_ndvi_tif(file_paths_list, out_path):
+    #normalized difference vegetation index (ndvi)
     #b4 is red band; b8 is nir band
     b4_file = [file for file in file_paths_list if 'B04' in file]
     b8_file = [file for file in file_paths_list if 'B08' in file]
