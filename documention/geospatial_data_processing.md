@@ -25,7 +25,8 @@ Step 2:
 1.	‘Fill sinks’ (Planch and Darbeaux) using DEM as input.
 2.	Calculate Slope, Aspect, Curvature using the 'filled' DEM from step 1.
 3.	Take the filled dem from step 1 and calculate ‘Flow Accumulation’ (Top Down)
-4.	Calculate ‘Flow Width and Specific Catchment Area’ by taking filled DEM from step 1 and the ‘Flow Accumulation’ from step 3 (Flow Accumulation is the input for ‘Total Catchment Area’) 
+4.	Calculate ‘Flow Width and Specific Catchment Area’ by taking filled DEM from step 1 and
+    the ‘Flow Accumulation’ from step 3 (Flow Accumulation is the input for ‘Total Catchment Area’) 
 5.	Calculate TWI using the ‘Specific Catchment Area’ from step 4 and the Slope from step 2.
 
 ### Yield monitor cleaning
