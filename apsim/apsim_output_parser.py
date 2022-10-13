@@ -280,9 +280,14 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
         rot_pattern = "rot_(.*?)_sim"
         rotation = str(re.search(rot_pattern, df_header).group(1))
         #insert new columns with field name, mukey, rot
-        daily_df.insert(1, 'field', field)
-        daily_df.insert(2, 'mukey', mukey)
-        daily_df.insert(3, 'rotation', rotation)
+        filename_pattern = "name_"
+        # filename_root = str(re.search(filename_pattern, file))
+        filename_root = file.split("name_")
+        filename_optim = filename_root[1]
+        daily_df.insert(1, 'file_name', filename_optim)
+        daily_df.insert(2, 'field', field)
+        daily_df.insert(3, 'mukey', mukey)
+        daily_df.insert(4, 'rotation', rotation)
         daily_df = daily_df.reset_index( drop = True )
         #drop first row that has unit names
         #replace all ? with NaN
@@ -291,6 +296,7 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
         
         # cast explicit data types for processing
         data_type_dict = {
+            'file_name' : 'string',
             'title' : 'string',
             'field' : 'string',
             'mukey' : 'string',
@@ -310,7 +316,9 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
             #'surfaceom_c': 'float64',
             'leach_no3': 'float64',
             'corn_buac' : 'float64',
-            'soy_buac' : 'float64'
+            'soy_buac' : 'float64',
+            'Rain' : 'float64',
+            'drain' : 'float64',
             }
         if swim == True:
             swim_dict = {
@@ -321,8 +329,12 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
         
         daily_df = daily_df.astype( data_type_dict )
         df_year = daily_df.loc[daily_df['year'] == year].reset_index(drop=True)
+        if df_year.empty:
+            print(f"Dataframe is empty or year not found for {file}")
+            return
         # perform simple analytics at time scale (here we only do year)
         data = {
+            'file_name' : filename_optim,
             'title' : df_header,
             'field' : field,
             'mukey' : mukey,
@@ -343,6 +355,8 @@ def parse_summary_output_field(out_file_dir, year, swim=False): #, db_path, db_s
             #'surfaceom_c_init': df_year[ 'surfaceom_c' ].values[0],
             #'surfaceom_c_end': df_year[ 'surfaceom_c' ].values[-1],
             'leach_no3': df_year[ 'leach_no3' ].sum(),
+            'Rain' : df_year[ 'Rain' ].sum(),
+            'drain' : df_year[ 'drain' ].sum(),
         }
         if swim == True:
             swim_data_dict = {

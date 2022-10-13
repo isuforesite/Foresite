@@ -126,14 +126,13 @@ class ApexYieldMonitor(RitasYieldMonitor):
     
     def format_apex_file(self):
         self.formatted_gdf = super().format_ym_file()
-        ## convert feet to meters
+        ## if converting lbs to kg
         self.formatted_gdf['swath'] = self.formatted_gdf['Width'] * 0.3048
         self.formatted_gdf['Distance'] = self.formatted_gdf['Distance'] * 0.3048
-        # drop all zero yields
-        self.formatted_gdf = self.formatted_gdf[self.formatted_gdf['YieldMas'] != 0]
-        # convert lbs to kg; if converting tons to kg multiply by 907.18474 instead
         self.formatted_gdf['mass'] = (self.formatted_gdf['YieldMas'] * self.tar_moist) * 0.45359237
         self.formatted_gdf['ProcYear'] = self.formatted_gdf['ProcYear'].astype('int32')
+        ## if converting tons to kg
+        # self.formatted_gdf['mass'] = (self.formatted_gdf['YieldMas'] * self.tar_moist) * 907.18474
         self.formatted_gdf = self.formatted_gdf.rename(columns = {
             'Distance': 'd',
             'HarvestM' : 'moisture',
