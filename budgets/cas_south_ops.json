@@ -1,0 +1,41 @@
+{
+    "2015": {
+        "cas_2015_ritas_path": "C:\\Users\\mjn\\Documents\\Dev\\YieldMonitor\\data\\farms\\cas\\fields\\cas_south\\2015\\soybean\\ritas_ym\\cas_south_2015_006_smoothed_width10_height10_regular0__nmax30.geojson",
+        "cas_2015_plant_app1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2015-Plant Soybeans-Application\\Bob Casterton-Casterton-Cas South-2015-Plant Soybeans-Application.dbf",
+        "cas_2015_plant_seed_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2015-Plant Soybeans-Seeding-Soybeans\\Bob Casterton-Casterton-Cas South-2015-Plant Soybeans-Seeding-Soybeans.dbf",
+        "cas_2015_pest2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2015-Spraying 2-Application\\Bob Casterton-Casterton-Cas South-2015-Spraying 2-Application.dbf",
+        "cas_2015_pest3_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2015-Spraying 3-Application\\Bob Casterton-Casterton-Cas South-2015-Spraying 3-Application.dbf"
+    },
+    "2016": {
+        "cas_2016_ritas_path": "C:\\Users\\mjn\\Documents\\Dev\\YieldMonitor\\data\\farms\\cas\\fields\\cas_south\\2016\\corn\\ritas_ym\\cas_south_2016_006_smoothed_width10_height10_regular0__nmax30.geojson",
+        "cas_2016_plant_app1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2016-Plant Corn-Application\\Bob Casterton-Casterton-Cas South-2016-Plant Corn-Application.dbf",
+        "cas_2016_plant_seed_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2016-Plant Corn-Seeding-Corn\\Bob Casterton-Casterton-Cas South-2016-Plant Corn-Seeding-Corn.dbf",
+        "cas_2016_pest1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2016-Pre-emerge Spraying-Application\\Bob Casterton-Casterton-Cas South-2016-Pre-emerge Spraying-Application.dbf",
+        "cas_2016_fert1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2016-Side Dress-Application\\Bob Casterton-Casterton-Cas South-2016-Side Dress-Application.dbf",
+        "cas_2016_fert2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2016-Sidedress 2-Application\\Bob Casterton-Casterton-Cas South-2016-Sidedress 2-Application.dbf",
+        "cas_2016_pest2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2016-Spraying-Application\\Bob Casterton-Casterton-Cas South-2016-Spraying-Application.dbf"
+    },
+    "2017": {
+        "cas_2017_ritas_path": "C:\\Users\\mjn\\Documents\\Dev\\YieldMonitor\\data\\farms\\cas\\fields\\cas_south\\2017\\corn\\ritas_ym\\cas_south_2017_006_smoothed_width10_height10_regular0__nmax30.geojson",
+        "cas_2017_plant_app1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2017-Plant Corn-Application\\Bob Casterton-Casterton-Cas South-2017-Plant Corn-Application.dbf",
+        "cas_2017_plant_seed_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2017-Plant Corn-Seeding-Corn\\Bob Casterton-Casterton-Cas South-2017-Plant Corn-Seeding-Corn.dbf",
+        "cas_2017_pest1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2017-Post-emerge Spraying-Application\\Bob Casterton-Casterton-Cas South-2017-Post-emerge Spraying-Application.dbf",
+        "cas_2017_pest2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2017-Pre-emerge Spraying-Application\\Bob Casterton-Casterton-Cas South-2017-Pre-emerge Spraying-Application.dbf",
+        "cas_2017_fert_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2017-Side Dress-Application\\Bob Casterton-Casterton-Cas South-2017-Side Dress-Application.dbf",
+        "cas_2017_fert2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2017-Sidedress 2-Application\\Bob Casterton-Casterton-Cas South-2017-Sidedress 2-Application.dbf"
+    },
+    "2018": {
+        "cas_2018_ritas_path": "C:\\Users\\mjn\\Documents\\Dev\\YieldMonitor\\data\\farms\\cas\\fields\\cas_south\\2018\\corn\\ritas_ym\\cas_south_2018_006_smoothed_width10_height10_regular0__nmax30.geojson",
+        "cas_2018_plant_seed_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2018-Plant Corn-Seeding-Corn\\Bob Casterton-Casterton-Cas South-2018-Plant Corn-Seeding-Corn.dbf",
+        "cas_2018_pest1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2018-Post-emerge Spraying-Application\\Bob Casterton-Casterton-Cas South-2018-Post-emerge Spraying-Application.dbf",
+        "cas_2018_pest2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2018-Pre-emerge Spraying-Application\\Bob Casterton-Casterton-Cas South-2018-Pre-emerge Spraying-Application.dbf",
+        "cas_2018_fert1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2018-Sidedress 2-Application\\Bob Casterton-Casterton-Cas South-2018-Sidedress 2-Application.dbf",
+        "cas_2018_fert2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2018-Sidedress-Application\\Bob Casterton-Casterton-Cas South-2018-Sidedress-Application.dbf"
+    },
+    "2019": {
+        "cas_2019_ritas_path": "C:\\Users\\mjn\\Documents\\Dev\\YieldMonitor\\data\\farms\\cas\\fields\\cas_south\\2019\\soybean\\ritas_ym\\cas_south_2019_006_smoothed_width10_height10_regular0__nmax30.geojson",
+        "cas_2019_plant_seed_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2019-Plant Soybeans-Seeding-Soybeans\\Bob Casterton-Casterton-Cas South-2019-Plant Soybeans-Seeding-Soybeans.dbf",
+        "cas_2019_pest1_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2019-Post-emerge Spraying-Application\\Bob Casterton-Casterton-Cas South-2019-Post-emerge Spraying-Application.dbf",
+        "cas_2019_pest2_path": "C:\\Users\\mjn\\Documents\\Foresite\\yield_monitor_data\\cas\\Bob Casterton-Casterton-Cas South-2019-Pre-emerge Spraying-Application\\Bob Casterton-Casterton-Cas South-2019-Pre-emerge Spraying-Application.dbf"
+    }
+}
