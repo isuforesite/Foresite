@@ -28,3 +28,17 @@ Nitrate-N (mg/L) = 0.2259 x Nitrate-NO3 (mg/L)
 
 And to convert Nitrate-N (mg/L) to Nitrate-NO3 (mg/L):
 Nitrate-NO3 (mg/L) = 4.4268 x Nitrate-N (mg/L)
+
+### Square meters to acres
+acre = m² * 0.00024711
+eg., 25,000m2 * 0.00024711 = 6.177634 acres
+
+
+## Mg to bu/ac
+https://www.extension.iastate.edu/agdm/wholefarm/html/c6-80.html
+
+corn
+1 Mg/ha = 15.93 bu/ac
+
+wheat/soybeans
+1 Mg/ha = 14.87 bu/ac
