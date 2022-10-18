@@ -1,0 +1,2 @@
+how to add a new shapefile to a database in osgeo4w/ogr2ogr
+ogr2ogr -f "PostgreSQL" -t_srs "EPSG:4326" PG:"host=host port=5432 user=username password=pass dbname=aepe schemas=targetschema" file_to_upload.geojson -nln new_table_name
