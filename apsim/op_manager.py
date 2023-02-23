@@ -4,6 +4,24 @@ import pandas as pd
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 
+try:
+    with open(config_file, "rb") as f:
+        self.config = tomli.load(f)
+except EnvironmentError as e:
+    print(os.strerror(e.errno))
+    print("Missing configiguration file.")
+    print("Please create a config.toml file with your Planet API key.")
+    print("Use config.toml.example as a template.")
+match self.config:
+    case {
+        "api": {"planet_api_key": str(), 'item_type': str(), 'image_type': str(), 'unique_image_dates_only': str()},
+        "filters": {"mask": str(), 'max_cloud': float(), 'start_date': str(), 'end_date': str()},
+    }:
+        pass
+    case ValueError as e:
+        print(f'Missing or incorrect value in config.toml')
+        print(str(e))
+
 ###
 def init_new_op( date ):
     """creates new xml operation on specified date
