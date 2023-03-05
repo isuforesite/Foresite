@@ -1,4 +1,37 @@
-[mgmt.2021]
+[general]
+field_name = "accola"
+met_file = "test.met"
+
+[model_params]
+#whether to use Saxton Rawls in calculations
+saxton = 'True'
+#whether to use swim for water balance -- not recommended
+swim = 'False'
+
+## This is an example management file, and will be used when creating APSIM files with the wrapper.
+## TOML reads this file and creates a table, which is then basically read as json.
+## [mgmt.year.xxxx] should be the heading for whatever year
+## a management action e.g., plant should have a . and number for the occurence within that year
+## e.g., fert.2.kg_ha is the amount of fertilizer to apply the second time in that year
+## fert.1.kg_ha would be the amount for the first time
+##
+## see below example for a soybean-corn rotation
+
+# 2021 management
+[mgmt.year.2021]
+#planting
+plant.1.xml_file = "crop_xml/Soybean1.xml"
+plant.1.sow_crop =  "soybean"
+plant.1.cultivar =  "MG_2"
+plant.1.planting_date =  "16-may"
+plant.1.sowing_density =  34
+plant.1.sowing_depth =  51
+plant.1.row_spacing =  762
+#fertilizer
+fert.1.kg_ha = 0
+fert.1.date = ""
+fert.1.formula = ""
+fert.1.depth = 0
 #tillage
 tillage.1.implement = "user_defined"
 tillage.1.depth = 88
@@ -8,32 +41,20 @@ tillage.2.implement = "user_defined"
 tillage.2.depth = 76
 tillage.2.residue_incorp = 0.33
 tillage.2.date = "16-may"
-#fertilizer
-fert.1.kg_ha = 0
-fert.1.date = ""
-fert.1.formula = ""
-fert.1.depth = 0
-#planting
-plant.1.xml_file = "crop_xml/Soybean1.xml"
-plant.1.sow_crop =  "soybean"
-plant.1.cultivar =  "MG_2"
-plant.1.planting_dates =  "16-may"
-plant.1.sowing_density =  34
-plant.1.sowing_depth =  51
-plant.1.row_spacing =  762
 #harvest
 harvest.1.crop =  "soybean"
 harvest.1.date =  "24-sep"
-[mgmt.2022]
-#tillage
-tillage.1.implement = "user_defined"
-tillage.1.depth = 57
-tillage.1.residue_incorp = 0.25
-tillage.1.date = "16-apr"
-tillage.2.implement = "user_defined"
-tillage.2.depth = 76
-tillage.2.residue_incorp = 0.20
-tillage.2.date = "23-apr"
+
+# 2022 management
+[mgmt.year.2022]
+#planting
+plant.1.xml_file = "crop_xml/Maize1.xml"
+plant.1.sow_crop =  "maize"
+plant.1.cultivar =  "B_105"
+plant.1.planting_date =  "18-may"
+plant.1.sowing_density =  8
+plant.1.sowing_depth =  51
+plant.1.row_spacing =  762
 #fertilizer
 fert.1.kg_ha = 112.09
 fert.1.date = "21-apr"
@@ -43,14 +64,15 @@ fert.2.kg_ha = 56.04
 fert.2.date = "28-jun"
 fert.2.formula =  "uan_n"
 fert.2.depth =  50.0
-#planting
-plant.1.xml_file = "crop_xml/Maize1.xml"
-plant.1.sow_crop =  "maize"
-plant.1.cultivar =  "B_105"
-plant.1.planting_dates =  "18-may"
-plant.1.sowing_density =  8
-plant.1.sowing_depth =  51
-plant.1.row_spacing =  762
+#tillage
+tillage.1.implement = "user_defined"
+tillage.1.depth = 57
+tillage.1.residue_incorp = 0.25
+tillage.1.date = "16-apr"
+tillage.2.implement = "user_defined"
+tillage.2.depth = 76
+tillage.2.residue_incorp = 0.20
+tillage.2.date = "23-apr"
 #harvest
 harvest.1.crop =  "maize"
 harvest.1.date =  "15-oct"

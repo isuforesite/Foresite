@@ -67,14 +67,7 @@ def get_date( date_str, year ):
 
     return date
 
-
-def get_rot_year_one(years):
-    return years[::2]
-
-def get_rot_year_two(years):
-    return years[1::2]
-
-def create_mukey_runs(soils_list, dbconn, met_name, field_name='field', tar_folder=None, start_year=2015, end_year=2018, swim = False, saxton=True, maize_xml=None, soy_xml=None, wheat_xml=None):
+def create_mukey_runs(soils_list, dbconn, met_name, field_name='field', tar_folder=None, swim = False, saxton=True, maize_xml=None, soy_xml=None, wheat_xml=None):
     """Creates APSIM simulation files for desired list of SSURGO mukeys.
 
     Args:
@@ -84,8 +77,6 @@ def create_mukey_runs(soils_list, dbconn, met_name, field_name='field', tar_fold
         ###TODO convert all this from toml config file instead
         met_name (str): Met filename
         field_name (str, optional): Name of field files are being created for. Defaults to 'field'.
-        start_year (int, optional): Starting year for simulations. Defaults to 2015. NOTE: end_year - start_year must be divisble by 3.
-        end_year (int, optional): Ending year for simulations. Defaults to 2018. NOTE: end_year - start_year must be divisble by 3.
         crop_mgmt (dict, optional): Dictionary (likely a loaded json file) containing management practices for field. Defaults to None.
         swim (bool, optional): Create water table using the APSIM SWIM module. Defaults to False.
         saxton (bool, optional): Create soil profiles using Saxton-Rawls parameters. Defaults to True.
@@ -255,27 +246,6 @@ def create_mukey_runs(soils_list, dbconn, met_name, field_name='field', tar_fold
             op_man = apsim.OpManager()
             op_man.add_empty_manager()
             #get range of years for runs and keep each management year as a list
-            num_years = end_year - start_year
-            years_range = list(range(start_year, end_year+1))
-            rot_years_one = get_rot_year_one(years_range)
-            rot_years_two = get_rot_year_two(years_range)
-            rot_every_year = years_range[::1]
-            if num_years % 3 == 0:
-                if rotation == 'cfs':
-                    for i in rot_years_one:
-                        #--- add ops for soybean in year 1 ---#
-                        #add tillage operations
-                        tillage_df = apsim.man.create_tillage_df(sfc_mgmt, tillage_implement_key, tillage_depth_key, tillage_f_incorp_key, tillage_date_key, i)
-                        apsim.man.add_tillage_ops(tillage_df, op_man)
-                        #add planting operations
-                        planting_df = apsim.man.create_planting_df(sfc_mgmt, plant_crop_key, cultivar_key, sowing_density_key, sowing_depth_key, row_spacing_key, planting_date_key, i)
-                        apsim.man.add_planting_ops(planting_df, op_man)
-                        #add fert operations
-                        fert_df = apsim.man.create_fert_df(sfc_mgmt, fert_amount_key, fert_formula_key, fert_depth_key, fert_date_key, i)
-                        apsim.man.add_fert_ops(fert_df, op_man)
-                        #add harvest operations
-                        harvest_df = apsim.man.create_harvest_df(sfc_mgmt, harvest_crop_key, harvest_date_key, i)
-                        apsim.man.add_harvest_ops(harvest_df, op_man)
 
             area.append( op_man.man_xml )
             outfile = f'{runs_folder_path}/{field_name}_{soil_id}_{rotation}.apsim'
