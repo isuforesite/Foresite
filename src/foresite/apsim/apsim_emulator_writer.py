@@ -1,5 +1,4 @@
-#!/usr/bin/env Python
-
+"""Tbw."""
 import os
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement

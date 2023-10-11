@@ -1,13 +1,4 @@
 .vscode
 __pycache__
 database.ini
-/apsim/__pycache__
-/apsim/tmp.txt
 .ipynb_checkpoints
-foresite.egg-info
-test_apsim_files*/
-setup.py
-apsim/apsim_parser.ipynb
-analyses/api_demo.ipynb
-geospatial/data
-analyses/
