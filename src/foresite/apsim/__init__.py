@@ -1,1 +1,1 @@
-#!/usr/bin/env Python
+"""Importable."""

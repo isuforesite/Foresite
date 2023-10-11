@@ -1,5 +1,4 @@
-#!/usr/bin/env Python
-
+"""Tbw."""
 import os
 import sys
 import pandas as pd

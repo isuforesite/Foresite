@@ -1,4 +1,4 @@
-#!/usr/bin/env Python
+"""Tbw."""
 import sys
 import pathlib
 import os
