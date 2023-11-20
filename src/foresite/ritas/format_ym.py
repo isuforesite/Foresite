@@ -11,6 +11,7 @@ import pandas as pd
 # swath: swath width in meters
 # d: distance in meters between the current row observation and the previous row observation,
 
+
 def read_ym_file(ym_file) -> gpd.GeoDataFrame:
     """Reads in ym file, checks if geometry column exists, and returns gdf.
 
@@ -25,12 +26,15 @@ def read_ym_file(ym_file) -> gpd.GeoDataFrame:
         if gdf.geometry is not None:
             return gdf
         else:
-            print('File has no geometry column.')
+            print("File has no geometry column.")
             return
     except Exception:
-        print('Incorrect path, file does not exist, or not readable by GeoPandas.')
+        print(
+            "Incorrect path, file does not exist, or not readable by GeoPandas."
+        )
 
-def reproject_ym(ym_gdf, target_crs='EPSG:26915') -> gpd.GeoDataFrame:
+
+def reproject_ym(ym_gdf, target_crs="EPSG:26915") -> gpd.GeoDataFrame:
     """Reporjects yield monitor file to a UTM projection.
 
     Args:
@@ -41,12 +45,12 @@ def reproject_ym(ym_gdf, target_crs='EPSG:26915') -> gpd.GeoDataFrame:
         gpd.GeoDataFrame: gdf in new UTM projection.
     """
     if ym_gdf.crs.utm_zone is not None:
-        print('Projection is already in UTM')
+        print("Projection is already in UTM")
         return
     else:
-        print('Changing projection to UTM')
-        #convert to a UTM projection, default is UTM zone 15N/26915
-        reprojected_ym_gdf = ym_gdf.to_crs('EPSG:26915')
+        print("Changing projection to UTM")
+        # convert to a UTM projection, default is UTM zone 15N/26915
+        reprojected_ym_gdf = ym_gdf.to_crs("EPSG:26915")
         return reprojected_ym_gdf
 
 
@@ -60,11 +64,12 @@ def format_xy(ym_gdf) -> gpd.GeoDataFrame:
         gpd.GeoDataFrame: a geopandas geodataframe with new x, y columns
     """
     if ym_gdf.crs.utm_zone is not None:
-        ym_gdf['x'] = ym_gdf['geometry'].x
-        ym_gdf['y'] = ym_gdf['geometry'].y
+        ym_gdf["x"] = ym_gdf["geometry"].x
+        ym_gdf["y"] = ym_gdf["geometry"].y
         return ym_gdf
     else:
         return
+
 
 def add_record_col(ym_gdf) -> gpd.GeoDataFrame:
     """Adds record/id/numberic column to gdf.
@@ -73,8 +78,9 @@ def add_record_col(ym_gdf) -> gpd.GeoDataFrame:
     Returns:
         gpd.GeoDataFrame: a geopandas geodataframe with new record/id column.
     """
-    ym_gdf['record'] = range(1, len(ym_gdf)+1)
+    ym_gdf["record"] = range(1, len(ym_gdf) + 1)
     return ym_gdf
+
 
 class RitasYieldMonitor:
     """Class for basic RITAS yield monitor file creation.
@@ -88,27 +94,33 @@ class RitasYieldMonitor:
         gpd.GeoDataFrame: a geopandas geodataframe with new record/id column.
 
     """
-    def __init__(self, ym_file, site_name, crop, tar_moist=15.5, tar_crs="EPSG:26915"):
+
+    def __init__(
+        self, ym_file, site_name, crop, tar_moist=15.5, tar_crs="EPSG:26915"
+    ):
         self.ym_file = ym_file
         self.site_name = site_name
         self.crop = crop
         self.tar_moist = tar_moist
         self.tar_crs = tar_crs
-        
+
     def format_ym_file(self):
         if self.tar_moist < 0:
-            print('Target moisture cannot be less than 0')
+            print("Target moisture cannot be less than 0")
             return
         else:
-            self.tar_moist = 1 + (self.tar_moist/100)
+            self.tar_moist = 1 + (self.tar_moist / 100)
         self.formatted_gdf = read_ym_file(self.ym_file)
-        self.formatted_gdf = reproject_ym(self.formatted_gdf, target_crs=self.tar_crs)
+        self.formatted_gdf = reproject_ym(
+            self.formatted_gdf, target_crs=self.tar_crs
+        )
         self.formatted_gdf = format_xy(self.formatted_gdf)
         self.formatted_gdf = add_record_col(self.formatted_gdf)
-        self.formatted_gdf['crop'] = self.crop
-        self.formatted_gdf['site'] = self.site_name
+        self.formatted_gdf["crop"] = self.crop
+        self.formatted_gdf["site"] = self.site_name
         return self.formatted_gdf
-    
+
+
 class ApexYieldMonitor(RitasYieldMonitor):
     """RITAS Yield Monitor class for JD Apex system data.
 
@@ -121,25 +133,31 @@ class ApexYieldMonitor(RitasYieldMonitor):
     Distance : Distance traveled (feet) -> returned as 'd' (meters)
     'ProcYear': returned as 'year'
     """
+
     def __init__(self, ym_file, site_name, crop, tar_moist, tar_crs):
         super().__init__(ym_file, site_name, crop, tar_moist, tar_crs)
-    
+
     def format_apex_file(self):
         self.formatted_gdf = super().format_ym_file()
         ## if converting lbs to kg
-        self.formatted_gdf['swath'] = self.formatted_gdf['Width'] * 0.3048
-        self.formatted_gdf['Distance'] = self.formatted_gdf['Distance'] * 0.3048
-        self.formatted_gdf['mass'] = (self.formatted_gdf['YieldMas'] * self.tar_moist) * 0.45359237
-        self.formatted_gdf['ProcYear'] = self.formatted_gdf['ProcYear'].astype('int32')
+        self.formatted_gdf["swath"] = self.formatted_gdf["Width"] * 0.3048
+        self.formatted_gdf["Distance"] = (
+            self.formatted_gdf["Distance"] * 0.3048
+        )
+        self.formatted_gdf["mass"] = (
+            self.formatted_gdf["YieldMas"] * self.tar_moist
+        ) * 0.45359237
+        self.formatted_gdf["ProcYear"] = self.formatted_gdf["ProcYear"].astype(
+            "int32"
+        )
         ## if converting tons to kg
         # self.formatted_gdf['mass'] = (self.formatted_gdf['YieldMas'] * self.tar_moist) * 907.18474
-        self.formatted_gdf = self.formatted_gdf.rename(columns = {
-            'Distance': 'd',
-            'HarvestM' : 'moisture',
-            'ProcYear':'year'
-            })
-        
+        self.formatted_gdf = self.formatted_gdf.rename(
+            columns={
+                "Distance": "d",
+                "HarvestM": "moisture",
+                "ProcYear": "year",
+            }
+        )
+
         return self.formatted_gdf
-
-
-

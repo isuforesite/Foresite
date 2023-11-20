@@ -7,7 +7,8 @@ Created as part of ISU C-CHANGE Foresite system
 
 from configparser import ConfigParser
 
-def config( filename='database.ini', section='postgresql' ):
+
+def config(filename="database.ini", section="postgresql"):
     # create a parser to parse through section of ini
     parser = ConfigParser()
     parser.read(filename)
@@ -19,6 +20,6 @@ def config( filename='database.ini', section='postgresql' ):
         for param in params:
             db[param[0]] = param[1]
     else:
-        raise Exception(f'Section {section} not found in the {filename} file.')
-    #return database information
+        raise Exception(f"Section {section} not found in the {filename} file.")
+    # return database information
     return db
