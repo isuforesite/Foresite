@@ -255,18 +255,18 @@ def get_swim_xml(lyr_cnt=3):
     wattabnh4 = SubElement(soluteparms, "WaterTableNH4").text = str(0)
     wattaburea = SubElement(soluteparms, "WaterTableUrea").text = str(0)
     wattabtracer = SubElement(soluteparms, "WaterTableTracer").text = str(0)
-    mininhib = (
-        SubElement(soluteparms, "WaterTableMineralisationInhibitor").text
-    ) = str(0)
-    ureainhib = (
-        SubElement(soluteparms, "WaterTableUreaseInhibitor").text
-    ) = str(0)
-    nitrifinhib = (
-        SubElement(soluteparms, "WaterTableNitrificationInhibitor").text
-    ) = str(0)
-    denitrifinhib = (
-        SubElement(soluteparms, "WaterTableDenitrificationInhibitor").text
-    ) = str(0)
+    mininhib = SubElement(
+        soluteparms, "WaterTableMineralisationInhibitor"
+    ).text = str(0)
+    ureainhib = SubElement(soluteparms, "WaterTableUreaseInhibitor").text = (
+        str(0)
+    )
+    nitrifinhib = SubElement(
+        soluteparms, "WaterTableNitrificationInhibitor"
+    ).text = str(0)
+    denitrifinhib = SubElement(
+        soluteparms, "WaterTableDenitrificationInhibitor"
+    ).text = str(0)
     thickness = SubElement(soluteparms, "Thickness")
     for idx in range(1, lyr_cnt, 1):
         SubElement(thickness, "double").text = str(1000)
@@ -422,9 +422,9 @@ class Soil:
 
             # entrapped air %
             soil_df.loc[(soil_df["claytotal_r"] >= 55), "sat_e"] = 0.03  # clay
-            soil_df.loc[
-                (soil_df["sandtotal_r"] >= 85), "sat_e"
-            ] = 0.07  # sands
+            soil_df.loc[(soil_df["sandtotal_r"] >= 85), "sat_e"] = (
+                0.07  # sands
+            )
             soil_df.loc[
                 (soil_df["claytotal_r"] < 55) & (soil_df["sandtotal_r"] < 85),
                 "sat_e",

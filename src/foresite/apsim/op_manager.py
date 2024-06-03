@@ -1,4 +1,5 @@
 """Tbw."""
+
 import pandas as pd
 import xml.etree.ElementTree
 from xml.etree.ElementTree import ElementTree, Element, SubElement
@@ -381,9 +382,9 @@ class OpManager:
         !bbc_gradient = -1
         !bbc_potential = {} - {}
         """.format(bbc_potential[0], bbc_potential[1])
-        gradient_event = (
-            SubElement(gradient_script, "event").text
-        ) = "start_of_day"
+        gradient_event = SubElement(gradient_script, "event").text = (
+            "start_of_day"
+        )
 
         end_script = SubElement(empty_man, "script")
         end_script_text = SubElement(end_script, "text")
