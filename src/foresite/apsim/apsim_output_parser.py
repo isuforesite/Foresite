@@ -1,4 +1,5 @@
 """Tbw."""
+
 import os
 import sys
 import pandas as pd
@@ -9,7 +10,7 @@ import re
 
 
 def parse_all_output_county(
-    out_file_dir
+    out_file_dir,
 ):  # , year=2019), db_path, db_schema, db_table
     """Parses all .out files for a county, gets daily output and returns df for the given year.
     Arguments:
