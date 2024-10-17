@@ -1,16 +1,12 @@
 """Tbw."""
 
-import sys
-import pathlib
+import fnmatch
 import os
 import traceback
-import fnmatch
-import xml.etree.ElementTree
-from xml.etree.ElementTree import ElementTree, Element, SubElement
-import pandas as pd
-import io
-import json
+from xml.etree.ElementTree import Element, ElementTree, SubElement
+
 import apsim.wrapper as apsim
+import pandas as pd
 
 ###!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###
 # Set all of the json mgmt keys to be parsed over
@@ -126,9 +122,7 @@ def create_mukey_runs(
     """
     if tar_folder == None:
         tar_folder = os.getcwd()
-    runs_folder_path = (
-        f"{tar_folder}/apsim_files/{field_name}/{end_year}/{rotation}/"
-    )
+    runs_folder_path = f"{tar_folder}/apsim_files/{field_name}/{end_year}/{rotation}/"
     if not os.path.exists(runs_folder_path):
         os.makedirs(runs_folder_path)
     if os.path.exists(runs_folder_path):
@@ -152,9 +146,7 @@ def create_mukey_runs(
     for i in soils_list:
         try:
             soil_id = i
-            soil_query = """select * from api.get_soil_properties( array[{}]::text[] )""".format(
-                i
-            )
+            soil_query = """select * from api.get_soil_properties( array[{}]::text[] )""".format(i)
             soil_df = pd.read_sql(soil_query, dbconn)
             if soil_df.empty:
                 print(f"Soil {i} not found")
@@ -166,9 +158,7 @@ def create_mukey_runs(
             apsim_xml.set("creator", "C-CHANGE Foresite")
             apsim_xml.set("name", field_name)
             sim = SubElement(apsim_xml, "simulation")
-            sim.set(
-                "name", f"name_{field_name}_mukey_{soil_id}_rot_{rotation}_sim"
-            )
+            sim.set("name", f"name_{field_name}_mukey_{soil_id}_rot_{rotation}_sim")
 
             # set met file
             metfile = SubElement(sim, "metfile")
@@ -182,15 +172,11 @@ def create_mukey_runs(
             clock = SubElement(sim, "clock")
             clock_start = SubElement(clock, "start_date")
             clock_start.set("type", "date")
-            clock_start.set(
-                "description", "Enter the start date of the simulation"
-            )
+            clock_start.set("description", "Enter the start date of the simulation")
             clock_start.text = start_date
             clock_end = SubElement(clock, "end_date")
             clock_end.set("type", "date")
-            clock_end.set(
-                "description", "Enter the end date of the simulation"
-            )
+            clock_end.set("description", "Enter the end date of the simulation")
             clock_end.text = end_date
             sumfile = SubElement(sim, "summaryfile")
             area = SubElement(sim, "area")
@@ -201,13 +187,9 @@ def create_mukey_runs(
             area.append(soil.soil_xml())
             ### surface om
             if rotation == "cfs":
-                surfom_xml = apsim.init_surfaceOM(
-                    "soybean", "soybean", 1250, 27, 0.0
-                )
+                surfom_xml = apsim.init_surfaceOM("soybean", "soybean", 1250, 27, 0.0)
             else:
-                surfom_xml = apsim.init_surfaceOM(
-                    "maize", "maize", 3500, 65, 0.0
-                )
+                surfom_xml = apsim.init_surfaceOM("maize", "maize", 3500, 65, 0.0)
             area.append(surfom_xml)
             ### fertilizer
             fert_xml = SubElement(area, "fertiliser")
@@ -296,9 +278,7 @@ def create_mukey_runs(
 
             output_xml.append(apsim.add_xy_graph("Date", graph_no3, "no3"))
             output_xml.append(apsim.add_xy_graph("Date", graph_yield, "yield"))
-            output_xml.append(
-                apsim.add_xy_graph("Date", graph_all, "all outputs")
-            )
+            output_xml.append(apsim.add_xy_graph("Date", graph_all, "all outputs"))
 
             op_man = apsim.OpManager()
             op_man.add_empty_manager()
@@ -345,9 +325,7 @@ def create_mukey_runs(
                         )
                         apsim.man.add_fert_ops(sfc_fert_df, op_man)
                         # add harvest operations
-                        sfc_harvest_df = apsim.man.create_harvest_df(
-                            sfc_mgmt, harvest_crop_key, harvest_date_key, i
-                        )
+                        sfc_harvest_df = apsim.man.create_harvest_df(sfc_mgmt, harvest_crop_key, harvest_date_key, i)
                         apsim.man.add_harvest_ops(sfc_harvest_df, op_man)
                     for i in rot_years_two:
                         # --- add ops for corn in year 2 ---#
@@ -384,9 +362,7 @@ def create_mukey_runs(
                         )
                         apsim.man.add_fert_ops(cfs_fert_df, op_man)
                         # add harvest operations
-                        cfs_harvest_df = apsim.man.create_harvest_df(
-                            cfs_mgmt, harvest_crop_key, harvest_date_key, i
-                        )
+                        cfs_harvest_df = apsim.man.create_harvest_df(cfs_mgmt, harvest_crop_key, harvest_date_key, i)
                         apsim.man.add_harvest_ops(cfs_harvest_df, op_man)
                 elif rotation == "sfc":
                     for i in rot_years_one:
@@ -424,9 +400,7 @@ def create_mukey_runs(
                         )
                         apsim.man.add_fert_ops(cfs_fert_df, op_man)
                         # add harvest operations
-                        cfs_harvest_df = apsim.man.create_harvest_df(
-                            cfs_mgmt, harvest_crop_key, harvest_date_key, i
-                        )
+                        cfs_harvest_df = apsim.man.create_harvest_df(cfs_mgmt, harvest_crop_key, harvest_date_key, i)
                         apsim.man.add_harvest_ops(cfs_harvest_df, op_man)
                     for i in rot_years_two:
                         # --- add ops for soybeans in year 2 ---#
@@ -463,9 +437,7 @@ def create_mukey_runs(
                         )
                         apsim.man.add_fert_ops(sfc_fert_df, op_man)
                         # add harvest operations
-                        sfc_harvest_df = apsim.man.create_harvest_df(
-                            sfc_mgmt, harvest_crop_key, harvest_date_key, i
-                        )
+                        sfc_harvest_df = apsim.man.create_harvest_df(sfc_mgmt, harvest_crop_key, harvest_date_key, i)
                         apsim.man.add_harvest_ops(sfc_harvest_df, op_man)
                 elif rotation == "cc":
                     for i in rot_every_year:
@@ -503,22 +475,16 @@ def create_mukey_runs(
                         )
                         apsim.man.add_fert_ops(cc_fert_df, op_man)
                         # add harvest operations
-                        cc_harvest_df = apsim.man.create_harvest_df(
-                            cc_mgmt, harvest_crop_key, harvest_date_key, i
-                        )
+                        cc_harvest_df = apsim.man.create_harvest_df(cc_mgmt, harvest_crop_key, harvest_date_key, i)
                         apsim.man.add_harvest_ops(cc_harvest_df, op_man)
                 else:
                     continue
             else:
-                print(
-                    "The total number of simulation years should be divisble by 3."
-                )
+                print("The total number of simulation years should be divisble by 3.")
                 break
 
             area.append(op_man.man_xml)
-            outfile = (
-                f"{runs_folder_path}/{field_name}_{soil_id}_{rotation}.apsim"
-            )
+            outfile = f"{runs_folder_path}/{field_name}_{soil_id}_{rotation}.apsim"
             ### management data
             tree = ElementTree()
             tree._setroot(apsim_xml)
@@ -527,14 +493,10 @@ def create_mukey_runs(
             if sim_count % 20 == 0:
                 print(f"Finished with {sim_count} files.")
             if sim_count == total_sims:
-                print(
-                    f"Finished! All files created for {field_name}, {rotation}, {end_year}!"
-                )
+                print(f"Finished! All files created for {field_name}, {rotation}, {end_year}!")
                 print(" ")
         except:
-            print(
-                f"File creation failed for {field_name}, {rotation}, {end_year}, mukey {soil_id}"
-            )
+            print(f"File creation failed for {field_name}, {rotation}, {end_year}, mukey {soil_id}")
             traceback.print_exc()
             sim_count += 1
             continue

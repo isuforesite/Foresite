@@ -1,6 +1,7 @@
-from xml.etree.ElementTree import ElementTree, Element, SubElement
-import pandas as pd
+from xml.etree.ElementTree import Element, SubElement
+
 import numpy as np
+import pandas as pd
 
 ### APSIM soil layers
 APSIM_Soil_Layers = [
@@ -87,9 +88,7 @@ def add_crop_xml(parent, crop_name, soil):
 
     sc_ll = SubElement(crop_elem, "LL")
     for lyr_idx, lyr in enumerate(APSIM_Soil_Layers):
-        val = get_depth_weighted_value(
-            APSIM_Soil_Layers[lyr_idx], soil.data[var_name], soil.Horizons
-        )
+        val = get_depth_weighted_value(APSIM_Soil_Layers[lyr_idx], soil.data[var_name], soil.Horizons)
         subelem = SubElement(sc_ll, "double")
         subelem.text = str(round(val, 3))
 
@@ -133,35 +132,24 @@ def add_subelement(parent, child, value):
 
 
 ###
-def set_value_by_depth(
-    soil_df, var_name, min_depth, max_depth, value, eqn=None
-):
+def set_value_by_depth(soil_df, var_name, min_depth, max_depth, value, eqn=None):
     """Set constant soil variable value based on upper and lower depth."""
     if value != None:
         if max_depth == None:
             soil_df.loc[(soil_df["hzdepb_r"] >= min_depth), var_name] = value
         else:
             soil_df.loc[
-                (soil_df["hzdept_r"] >= min_depth)
-                & (soil_df["hzdept_r"] < max_depth),
+                (soil_df["hzdept_r"] >= min_depth) & (soil_df["hzdept_r"] < max_depth),
                 var_name,
             ] = value
     elif eqn != None:
         if max_depth == None:
-            soil_df.loc[(soil_df["hzdepb_r"] >= min_depth), var_name] = eqn(
-                soil_df.loc[(soil_df["hzdepb_r"] >= min_depth)]
-            )
+            soil_df.loc[(soil_df["hzdepb_r"] >= min_depth), var_name] = eqn(soil_df.loc[(soil_df["hzdepb_r"] >= min_depth)])
         else:
             soil_df.loc[
-                (soil_df["hzdept_r"] >= min_depth)
-                & (soil_df["hzdept_r"] < max_depth),
+                (soil_df["hzdept_r"] >= min_depth) & (soil_df["hzdept_r"] < max_depth),
                 var_name,
-            ] = eqn(
-                soil_df.loc[
-                    (soil_df["hzdept_r"] >= min_depth)
-                    & (soil_df["hzdept_r"] < max_depth)
-                ]
-            )
+            ] = eqn(soil_df.loc[(soil_df["hzdept_r"] >= min_depth) & (soil_df["hzdept_r"] < max_depth)])
 
     return
 
@@ -174,41 +162,15 @@ def calculate_saxton_rawls(soil_df):
     OM = soil_df["om_r"] * 0.01
 
     # LL15
-    theta_1500t = (
-        -0.024 * S
-        + 0.487 * C
-        + 0.006 * OM
-        + 0.005 * S * OM
-        - 0.013 * C * OM
-        + 0.068 * S * C
-        + 0.031
-    )
+    theta_1500t = -0.024 * S + 0.487 * C + 0.006 * OM + 0.005 * S * OM - 0.013 * C * OM + 0.068 * S * C + 0.031
     soil_df["LL15"] = theta_1500t + (0.14 * theta_1500t - 0.02)
 
     # DUL
-    theta_33t = (
-        -0.251 * S
-        + 0.195 * C
-        + 0.011 * OM
-        + 0.006 * S * OM
-        - 0.027 * C * OM
-        + 0.452 * S * C
-        + 0.299
-    )
-    soil_df["DUL"] = theta_33t + (
-        1.283 * theta_33t**2 - 0.374 * theta_33t - 0.015
-    )
+    theta_33t = -0.251 * S + 0.195 * C + 0.011 * OM + 0.006 * S * OM - 0.027 * C * OM + 0.452 * S * C + 0.299
+    soil_df["DUL"] = theta_33t + (1.283 * theta_33t**2 - 0.374 * theta_33t - 0.015)
 
     # SAT
-    theta_s33t = (
-        0.278 * S
-        + 0.034 * C
-        + 0.022 * OM
-        - 0.018 * S * OM
-        - 0.027 * C * OM
-        - 0.584 * S * C
-        + 0.078
-    )
+    theta_s33t = 0.278 * S + 0.034 * C + 0.022 * OM - 0.018 * S * OM - 0.027 * C * OM - 0.584 * S * C + 0.078
     theta_s33 = theta_s33t + (0.636 * theta_s33t - 0.107)
     soil_df["SAT"] = soil_df["DUL"] + theta_s33 - 0.097 * S + 0.043
 
@@ -216,13 +178,9 @@ def calculate_saxton_rawls(soil_df):
     soil_df["BD"] = (1 - soil_df["SAT"]) * 2.65
 
     # KS
-    B = (np.log(1500) - np.log(33)) / (
-        np.log(soil_df["DUL"]) - np.log(soil_df["LL15"])
-    )
+    B = (np.log(1500) - np.log(33)) / (np.log(soil_df["DUL"]) - np.log(soil_df["LL15"]))
     ks_lambda = 1 / B
-    soil_df["KS"] = 1930 * (soil_df["SAT"] - soil_df["LL15"]) ** (
-        3 - ks_lambda
-    )
+    soil_df["KS"] = 1930 * (soil_df["SAT"] - soil_df["LL15"]) ** (3 - ks_lambda)
 
     return
 
@@ -255,18 +213,10 @@ def get_swim_xml(lyr_cnt=3):
     wattabnh4 = SubElement(soluteparms, "WaterTableNH4").text = str(0)
     wattaburea = SubElement(soluteparms, "WaterTableUrea").text = str(0)
     wattabtracer = SubElement(soluteparms, "WaterTableTracer").text = str(0)
-    mininhib = SubElement(
-        soluteparms, "WaterTableMineralisationInhibitor"
-    ).text = str(0)
-    ureainhib = SubElement(soluteparms, "WaterTableUreaseInhibitor").text = (
-        str(0)
-    )
-    nitrifinhib = SubElement(
-        soluteparms, "WaterTableNitrificationInhibitor"
-    ).text = str(0)
-    denitrifinhib = SubElement(
-        soluteparms, "WaterTableDenitrificationInhibitor"
-    ).text = str(0)
+    mininhib = SubElement(soluteparms, "WaterTableMineralisationInhibitor").text = str(0)
+    ureainhib = SubElement(soluteparms, "WaterTableUreaseInhibitor").text = str(0)
+    nitrifinhib = SubElement(soluteparms, "WaterTableNitrificationInhibitor").text = str(0)
+    denitrifinhib = SubElement(soluteparms, "WaterTableDenitrificationInhibitor").text = str(0)
     thickness = SubElement(soluteparms, "Thickness")
     for idx in range(1, lyr_cnt, 1):
         SubElement(thickness, "double").text = str(1000)
@@ -314,9 +264,7 @@ def get_soilwat_xml(soil):
     tot_clay = 0.0
     for lyr in APSIM_Soil_Layers:
         depth = lyr["max"] - lyr["min"]
-        tot_clay += depth * get_depth_weighted_value(
-            lyr, soil.Clay, soil.Horizons
-        )
+        tot_clay += depth * get_depth_weighted_value(lyr, soil.Clay, soil.Horizons)
     tot_clay = tot_clay / APSIM_Soil_Layers[-1]["max"]
 
     clay_bckts = [
@@ -333,17 +281,9 @@ def get_soilwat_xml(soil):
     for cb in clay_bckts:
         if (cb[0][0] <= tot_clay) & (cb[0][1] > tot_clay):
             u = cb[1]
-    u = [
-        cb[1]
-        for cb in clay_bckts
-        if ((cb[0][0] <= tot_clay) & (cb[0][1] > tot_clay))
-    ][0]
+    u = [cb[1] for cb in clay_bckts if ((cb[0][0] <= tot_clay) & (cb[0][1] > tot_clay))][0]
 
-    cona = [
-        cb[2]
-        for cb in clay_bckts
-        if ((cb[0][0] <= tot_clay) & (cb[0][1] > tot_clay))
-    ][0]
+    cona = [cb[2] for cb in clay_bckts if ((cb[0][0] <= tot_clay) & (cb[0][1] > tot_clay))][0]
 
     soil_wat = Element("SoilWater")
     sum_cona = SubElement(soil_wat, "SummerCona")
@@ -422,16 +362,12 @@ class Soil:
 
             # entrapped air %
             soil_df.loc[(soil_df["claytotal_r"] >= 55), "sat_e"] = 0.03  # clay
-            soil_df.loc[(soil_df["sandtotal_r"] >= 85), "sat_e"] = (
-                0.07  # sands
-            )
+            soil_df.loc[(soil_df["sandtotal_r"] >= 85), "sat_e"] = 0.07  # sands
             soil_df.loc[
                 (soil_df["claytotal_r"] < 55) & (soil_df["sandtotal_r"] < 85),
                 "sat_e",
             ] = 0.05  # loam
-            soil_df["SAT"] = (
-                1 - (soil_df["dbthirdbar_r"] / 2.65) - soil_df["sat_e"]
-            )
+            soil_df["SAT"] = 1 - (soil_df["dbthirdbar_r"] / 2.65) - soil_df["sat_e"]
 
         # air dry
         # 0 - 15 cm: 0.01 * 0.5 * wfifteenbar_r

@@ -1,25 +1,25 @@
-import geopandas as gpd
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 import csv
-import sys
-from datetime import datetime
+import fnmatch
 import json
 import os
-import fnmatch
-import apsim.run_apsim
 import shutil
-from apsim.apsim_input_writer import create_mukey_runs
-from glob import glob
-import database as db
-from zipfile import ZipFile
-import rasterio as rio
-from rasterio.mask import mask
-import rasterstats as rs
-from rasterio.warp import calculate_default_transform, reproject, Resampling
-from apsim.apsim_output_parser import parse_summary_output_field
+import sys
 import traceback
+from datetime import datetime
+from glob import glob
+from zipfile import ZipFile
+
+import apsim.run_apsim
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import rasterio as rio
+import rasterstats as rs
+from apsim.apsim_input_writer import create_mukey_runs
+from apsim.apsim_output_parser import parse_summary_output_field
+from rasterio.mask import mask
+from rasterio.warp import Resampling, calculate_default_transform, reproject
 
 ###---------------------------------------------------------###
 ###                     Helper functions                    ###
@@ -72,21 +72,13 @@ def create_apsim_files_from_dict(
         if not os.path.exists(out_path):
             os.makedirs(out_path)
         if rotation == "cfs":
-            corn_mgmt = get_management_file(
-                mgmt_folder, f"{field_prefix}_{rotation}_{end_year}.json"
-            )
-            soy_mgmt = get_management_file(
-                mgmt_folder, f"{field_prefix}_sfc_{prior_year}.json"
-            )
+            corn_mgmt = get_management_file(mgmt_folder, f"{field_prefix}_{rotation}_{end_year}.json")
+            soy_mgmt = get_management_file(mgmt_folder, f"{field_prefix}_sfc_{prior_year}.json")
             # print(json.dumps(corn_mgmt, indent=1))
             # print(json.dumps(soy_mgmt, indent=1))
         elif rotation == "sfc":
-            soy_mgmt = get_management_file(
-                mgmt_folder, f"{field_prefix}_{rotation}_{end_year}.json"
-            )
-            corn_mgmt = get_management_file(
-                mgmt_folder, f"{field_prefix}_cfs_{prior_year}.json"
-            )
+            soy_mgmt = get_management_file(mgmt_folder, f"{field_prefix}_{rotation}_{end_year}.json")
+            corn_mgmt = get_management_file(mgmt_folder, f"{field_prefix}_cfs_{prior_year}.json")
             # print(json.dumps(soy_mgmt, indent=1))
             # print(json.dumps(corn_mgmt, indent=1))
         create_mukey_runs(
@@ -105,9 +97,7 @@ def create_apsim_files_from_dict(
             maize_xml=maize_xml,
             soy_xml=soy_xml,
         )
-        met_src_path = os.path.join(
-            tar_folder, "met_files", met_folder, runs_dict[i][3]
-        )
+        met_src_path = os.path.join(tar_folder, "met_files", met_folder, runs_dict[i][3])
         met_tar_path = os.path.join(
             tar_folder,
             "apsim_files",
@@ -124,15 +114,9 @@ def run_apsim_files_from_dict(runs_dict, tar_folder):
         runs_folder = runs_dict[i][1]
         end_year = runs_dict[i][4]
         rotation = runs_dict[i][0]
-        tar_apsim_files_path = os.path.join(
-            tar_folder, "apsim_files", runs_folder, str(end_year), rotation
-        )
-        apsim.run_apsim.run_all_simulations(
-            apsim_files_path=tar_apsim_files_path
-        )
-        print(
-            f"Finished running files in {runs_folder}, {end_year}, {rotation}"
-        )
+        tar_apsim_files_path = os.path.join(tar_folder, "apsim_files", runs_folder, str(end_year), rotation)
+        apsim.run_apsim.run_all_simulations(apsim_files_path=tar_apsim_files_path)
+        print(f"Finished running files in {runs_folder}, {end_year}, {rotation}")
         print(" ")
 
 
@@ -169,9 +153,7 @@ def get_county(dbconn, table, fips, geom, limit=False, limit_num=100):
     """
     # Get watershed as geopandas df
     if limit:
-        query = (
-            f"SELECT * FROM {table} WHERE fips = '{fips}' LIMIT {limit_num};"
-        )
+        query = f"SELECT * FROM {table} WHERE fips = '{fips}' LIMIT {limit_num};"
     else:
         query = f"SELECT * FROM {table} WHERE fips = '{fips}';"
     county_gpd = gpd.read_postgis(query, dbconn, geom_col=geom)
@@ -224,15 +206,9 @@ def get_rotation(df, crop_column):
             else:
                 crops.append("other")
         # evaluate crops list and return a rotation
-        if (
-            all(x in crops for x in ["Corn", "Soybean"])
-            and last_crop == "Soybean"
-        ):
+        if all(x in crops for x in ["Corn", "Soybean"]) and last_crop == "Soybean":
             rotation = "sfc"
-        elif (
-            all(x in crops for x in ["Corn", "Soybean"])
-            and last_crop == "Corn"
-        ):
+        elif all(x in crops for x in ["Corn", "Soybean"]) and last_crop == "Corn":
             rotation = "cfs"
         elif all(x in crops for x in ["Corn"]):
             rotation = "cc"
@@ -294,9 +270,7 @@ def reproject_raster(inpath, outpath, target_crs):
     """
     dst_crs = target_crs  # CRS for web meractor
     with rio.open(inpath) as src:
-        transform, width, height = calculate_default_transform(
-            src.crs, dst_crs, src.width, src.height, *src.bounds
-        )
+        transform, width, height = calculate_default_transform(src.crs, dst_crs, src.width, src.height, *src.bounds)
         kwargs = src.meta.copy()
         kwargs.update(
             {
@@ -338,9 +312,7 @@ def stats_to_raster(zdf, raster, stats, out_raster, no_data="y"):
     index = int(input("Rasterize by which field? "))
     zone = zdf[field_list[index]]
     shapes = ((geom, value) for geom, value in zip(zdf.geometry, zone))
-    burned = rasterize(
-        shapes=shapes, fill=0, out_shape=out_shape, transform=transform
-    )
+    burned = rasterize(shapes=shapes, fill=0, out_shape=out_shape, transform=transform)
     show(burned)
     meta.update(dtype=rio.float32, nodata=0)
     # Optional to set nodata values to min of stat
@@ -611,9 +583,7 @@ def get_top2_precip_events(df, days_list, day_col, precip_col):
 ###---------------------------------------------------------###
 
 
-def find_sentinel_products(
-    footprint, api, start_date, end_date, max_cloud_cover
-):
+def find_sentinel_products(footprint, api, start_date, end_date, max_cloud_cover):
     products = api.query(
         footprint,
         date=(start_date, end_date),
@@ -625,14 +595,10 @@ def find_sentinel_products(
 
 
 def download_sentinel_image(products_gdf, api, out_path, img_index=0):
-    products_gdf_sorted = products_gdf.sort_values(
-        ["cloudcoverpercentage"], ascending=[True]
-    )
+    products_gdf_sorted = products_gdf.sort_values(["cloudcoverpercentage"], ascending=[True])
     img_selected = products_gdf_sorted.index[img_index]
     img_meta = products_gdf_sorted.iloc[img_index]
-    print(
-        f"Downloading image {img_meta['title']}, {img_meta['summary']} with cloud cover of {img_meta['cloudcoverpercentage']}."
-    )
+    print(f"Downloading image {img_meta['title']}, {img_meta['summary']} with cloud cover of {img_meta['cloudcoverpercentage']}.")
     api.download(img_selected, directory_path=out_path)
     return img_meta
 
@@ -658,9 +624,7 @@ def unzip_sentinel_images(image_path, img_title):
 ###---------------------------------------------------------###
 
 
-def get_image_bands(
-    in_path, img_bands=["*B04.jp2", "*B08.jp2", "*B04_10m.jp2", "*B08_10m.jp2"]
-) -> list:
+def get_image_bands(in_path, img_bands=["*B04.jp2", "*B08.jp2", "*B04_10m.jp2", "*B08_10m.jp2"]) -> list:
     # finds files with desired band extensions
     # bands are blue = 2, green = 3, red = 4, nir = 8
     # get all files with .jp2 in folder
@@ -722,9 +686,7 @@ def create_ndvi_tif(file_paths_list, out_path):
     b8 = rio.open(b8_file[0])
     red_b = b4.read()
     nir_b = b8.read()
-    ndvi = (nir_b.astype(np.float32) - red_b.astype(np.float32)) / (
-        nir_b.astype(np.float32) + red_b.astype(np.float32)
-    )
+    ndvi = (nir_b.astype(np.float32) - red_b.astype(np.float32)) / (nir_b.astype(np.float32) + red_b.astype(np.float32))
     meta = b4.meta
     meta.update(driver="GTiff")
     meta.update(dtype=rio.float32)
@@ -761,11 +723,7 @@ def create_savi_tif(file_paths_list, out_path):
     b8 = rio.open(b8_file[0])
     red_b = b4.read()
     nir_b = b8.read()
-    savi = (
-        (nir_b.astype(np.float32) - red_b.astype(np.float32))
-        / (nir_b.astype(np.float32) + red_b.astype(np.float32) + 0.428)
-        * (1.428)
-    )
+    savi = (nir_b.astype(np.float32) - red_b.astype(np.float32)) / (nir_b.astype(np.float32) + red_b.astype(np.float32) + 0.428) * (1.428)
     meta = b4.meta
     meta.update(driver="GTiff")
     meta.update(dtype=rio.float32)
@@ -786,14 +744,7 @@ def create_evi_tif(file_paths_list, out_path):
     blue_b = b2.read()
     red_b = b4.read()
     nir_b = b8.read()
-    evi = 2.5 * (
-        (nir_b.astype(np.float32) - red_b.astype(np.float32))
-        / (
-            (nir_b.astype(np.float32) + 6)
-            * (red_b.astype(np.float32) - 7.5)
-            * (blue_b.astype(np.float32) + 1)
-        )
-    )
+    evi = 2.5 * ((nir_b.astype(np.float32) - red_b.astype(np.float32)) / ((nir_b.astype(np.float32) + 6) * (red_b.astype(np.float32) - 7.5) * (blue_b.astype(np.float32) + 1)))
     meta = b4.meta
     meta.update(driver="GTiff")
     meta.update(dtype=rio.float32)
@@ -852,9 +803,7 @@ def prepare_twi_df(
     return twi_gdf
 
 
-def prepare_ndvi_df(
-    twi_gdf, month, in_path, out_path, target_crs, all_touched=False
-):
+def prepare_ndvi_df(twi_gdf, month, in_path, out_path, target_crs, all_touched=False):
     # prepare ndvi
     new_ndvi_file = reproject_raster(in_path, out_path, target_crs)
     ndvi_stats = rs.zonal_stats(
@@ -871,9 +820,7 @@ def prepare_ndvi_df(
     return ndvi_twi_gdf
 
 
-def prepare_gci_df(
-    ndvi_twi_gdf, month, in_path, out_path, target_crs, all_touched=False
-):
+def prepare_gci_df(ndvi_twi_gdf, month, in_path, out_path, target_crs, all_touched=False):
     # prepare ndvi
     new_gci_file = reproject_raster(in_path, out_path, target_crs)
     gci_stats = rs.zonal_stats(
@@ -890,9 +837,7 @@ def prepare_gci_df(
     return gci_ndvi_twi_gdf
 
 
-def prepare_met_df(
-    in_path, gci_ndvi_twi_gdf, year, header=7, precip_col="rain"
-):
+def prepare_met_df(in_path, gci_ndvi_twi_gdf, year, header=7, precip_col="rain"):
     # get met data
     met_df = pd.read_csv(in_path, header=header, sep=" ")
     if met_df.empty:
@@ -907,15 +852,9 @@ def prepare_met_df(
         "rain": float,
     }
     met_df = met_df.astype(data_type_dict)
-    top10_precip_events_df = get_top_ten_days(
-        met_df, str(year), "year", precip_col
-    )
-    adjacent_days_list = check_adjacent_days(
-        top10_precip_events_df, "day", precip_col
-    )
-    top2 = get_top2_precip_events(
-        top10_precip_events_df, adjacent_days_list, "day", precip_col
-    )
+    top10_precip_events_df = get_top_ten_days(met_df, str(year), "year", precip_col)
+    adjacent_days_list = check_adjacent_days(top10_precip_events_df, "day", precip_col)
+    top2 = get_top2_precip_events(top10_precip_events_df, adjacent_days_list, "day", precip_col)
     total_precip = sum_met_precip(met_df, str(year), precip_col)
     gci_ndvi_twi_gdf.insert(3, "top_prec_2", top2[1])
     gci_ndvi_twi_gdf.insert(3, "top_prec_1", top2[0])
@@ -986,9 +925,7 @@ def make_outdir_folders(field_list):
 
 def create_sampled_geofile(field_list, driver="GeoJSON"):
     for i in field_list:
-        field = json.loads(
-            open(f"field_processing_jsons/{i}.json", "r").read()
-        )
+        field = json.loads(open(f"field_processing_jsons/{i}.json", "r").read())
         field_folder = os.path.join("out_files", i, "fus")
         # if not os.path.exists(field_folder):
         #     os.mkdirs(field_folder)
@@ -1039,9 +976,7 @@ def create_sampled_geofile(field_list, driver="GeoJSON"):
                 print(f"July GCI file not found for {field_name} {i}.")
                 continue
             # sample twi to ym file
-            twi_out_path = os.path.join(
-                "out_files", field_name, f"{field_name}_twi_26915.tif"
-            )
+            twi_out_path = os.path.join("out_files", field_name, f"{field_name}_twi_26915.tif")
             twi_gdf = prepare_twi_df(
                 ym_file,
                 twi_path,
@@ -1116,20 +1051,12 @@ def create_sampled_geofile(field_list, driver="GeoJSON"):
             )
             ## met
             met_path = os.path.join("met_files", "nasapwr", f"{met_file}")
-            gci_ndvi_twi_met_gdf = prepare_met_df(
-                met_path, jul_gci_ndvi_twi_gdf, i, header=7, precip_col="rain"
-            )
+            gci_ndvi_twi_met_gdf = prepare_met_df(met_path, jul_gci_ndvi_twi_gdf, i, header=7, precip_col="rain")
             ## ssurgo
-            ssurgo_out_path = os.path.join(
-                "out_files", field_name, f"{field_name}_ssurgo_26915.geojson"
-            )
-            gci_ndvi_twi_met_ssurgo_gdf = prepare_ssurgo_df(
-                gci_ndvi_twi_met_gdf, ssurgo_path, ssurgo_out_path, target_crs
-            )
+            ssurgo_out_path = os.path.join("out_files", field_name, f"{field_name}_ssurgo_26915.geojson")
+            gci_ndvi_twi_met_ssurgo_gdf = prepare_ssurgo_df(gci_ndvi_twi_met_gdf, ssurgo_path, ssurgo_out_path, target_crs)
             ## apsim files
-            apsim_files_path = os.path.join(
-                "apsim_files", apsim_folder, i, rotation
-            )
+            apsim_files_path = os.path.join("apsim_files", apsim_folder, i, rotation)
             write_file = f"{field_name}_{crop}_{i}_full.geojson"
             # driver = GeoJSON or ESRI Shapefile
             prepare_apsim_full_df(

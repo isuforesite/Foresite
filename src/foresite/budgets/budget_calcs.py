@@ -6,7 +6,6 @@ Created as part of ISU C-CHANGE Foresite system on 13 Jan 2020
 """
 
 import pandas as pd
-import database as db
 
 
 def get_prod_costs(dbconn, schema, table, year):
@@ -74,13 +73,9 @@ class Budget:
             float -- cost of seed per acre
         """
         if self.current_crop == "corn":
-            self.seed_cost_acre = (
-                (seed_rate / 1000) * seed_price
-            ) * self.acres
+            self.seed_cost_acre = ((seed_rate / 1000) * seed_price) * self.acres
         elif self.current_crop == "soybean":
-            self.seed_cost_acre = (
-                (seed_rate / 140000) * seed_price
-            ) * self.acres
+            self.seed_cost_acre = ((seed_rate / 140000) * seed_price) * self.acres
         self.expenses["seed"] = self.seed_cost_acre
         return self.seed_cost_acre
 
@@ -117,26 +112,16 @@ class Budget:
         Returns:
             float -- cost of preharvest machinery per acre
         """
-        tillage_cost = (
-            var_chisel + fix_chisel + var_disk + fix_disk
-        ) * self.acres
+        tillage_cost = (var_chisel + fix_chisel + var_disk + fix_disk) * self.acres
         applicator_cost = (var_applicator + fix_applicator) * self.acres
         cultivator_cost = (var_cultivator + fix_cultivator) * self.acres
         planter_cost = (var_planter + fix_planter) * self.acres
         sprayer_cost = (var_sprayer + fix_planter) * self.acres
-        self.total_preharvest = (
-            tillage_cost
-            + applicator_cost
-            + cultivator_cost
-            + planter_cost
-            + sprayer_cost
-        )
+        self.total_preharvest = tillage_cost + applicator_cost + cultivator_cost + planter_cost + sprayer_cost
         self.expenses["preharv_mach"] = self.total_preharvest
         return self.total_preharvest
 
-    def harvest_machinery_cost(
-        self, fix_combine, var_combine, fix_wagon, var_wagon
-    ):
+    def harvest_machinery_cost(self, fix_combine, var_combine, fix_wagon, var_wagon):
         """Calculates per acre cost of harvest machinery
         Arguments:
             fix_combine {float} -- fixed cost of combine/harvester
@@ -208,9 +193,7 @@ class Budget:
             float -- total extra costs per acre
         """
         if rent == True:
-            self.extra_rent_cost = (
-                rent_cost + crop_insurance + misc
-            ) * self.acres
+            self.extra_rent_cost = (rent_cost + crop_insurance + misc) * self.acres
             self.expenses["extra"] = self.extra_rent_cost
             return self.extra_rent_cost
         else:
@@ -275,120 +258,40 @@ def calc_subfield_profit(
     mukey_counter = 0
     clukey_counter = 0
     # get commodity prices
-    comm_price_df = pd.read_sql(
-        f"SELECT * from public.hist_comm_prices WHERE year = '{year}';", dbconn
-    )
-    corn_price = float(
-        comm_price_df.loc[
-            comm_price_df["commodity"] == "corn", "mrkt_avg"
-        ].iloc[0]
-    )
-    soy_price = float(
-        comm_price_df.loc[
-            comm_price_df["commodity"] == "soybean", "mrkt_avg"
-        ].iloc[0]
-    )
+    comm_price_df = pd.read_sql(f"SELECT * from public.hist_comm_prices WHERE year = '{year}';", dbconn)
+    corn_price = float(comm_price_df.loc[comm_price_df["commodity"] == "corn", "mrkt_avg"].iloc[0])
+    soy_price = float(comm_price_df.loc[comm_price_df["commodity"] == "soybean", "mrkt_avg"].iloc[0])
     # get input costs
-    costs = pd.read_sql(
-        f"SELECT * FROM public.crop_prod_costs WHERE year = '{year}'", dbconn
-    )
-    corn_seed_price = float(
-        costs.loc[costs["input"] == "corn_seed", "fixed-cost"].iloc[0]
-    )
-    soy_seed_price = float(
-        costs.loc[costs["input"] == "soy_seed", "fixed-cost"].iloc[0]
-    )
-    n_price = float(
-        costs.loc[costs["input"] == "nitrogen", "fixed-cost"].iloc[0]
-    )
-    phos_price = float(
-        costs.loc[costs["input"] == "phosphorous", "fixed-cost"].iloc[0]
-    )
-    potash_price = float(
-        costs.loc[costs["input"] == "phosphorous", "fixed-cost"].iloc[0]
-    )
-    fix_chisel = float(
-        costs.loc[costs["input"] == "chisel_plow", "fixed-cost"].iloc[0]
-    )
-    var_chisel = float(
-        costs.loc[costs["input"] == "chisel_plow", "variable-cost"].iloc[0]
-    )
-    fix_disk = float(
-        costs.loc[
-            costs["input"] == "disk_field_cultivator", "fixed-cost"
-        ].iloc[0]
-    )
-    var_disk = float(
-        costs.loc[
-            costs["input"] == "disk_field_cultivator", "variable-cost"
-        ].iloc[0]
-    )
-    fix_applicator = float(
-        costs.loc[costs["input"] == "nh3_applicator", "fixed-cost"].iloc[0]
-    )
-    var_applicator = float(
-        costs.loc[costs["input"] == "nh3_applicator", "variable-cost"].iloc[0]
-    )
-    fix_cultivator = float(
-        costs.loc[costs["input"] == "field_cultivator", "fixed-cost"].iloc[0]
-    )
-    var_cultivator = float(
-        costs.loc[costs["input"] == "field_cultivator", "variable-cost"].iloc[
-            0
-        ]
-    )
-    fix_planter = float(
-        costs.loc[costs["input"] == "planter", "fixed-cost"].iloc[0]
-    )
-    var_planter = float(
-        costs.loc[costs["input"] == "planter", "variable-cost"].iloc[0]
-    )
-    fix_sprayer = float(
-        costs.loc[costs["input"] == "sprayer", "fixed-cost"].iloc[0]
-    )
-    var_sprayer = float(
-        costs.loc[costs["input"] == "sprayer", "variable-cost"].iloc[0]
-    )
-    fix_corn_combine = float(
-        costs.loc[costs["input"] == "combine_corn", "fixed-cost"].iloc[0]
-    )
-    var_corn_combine = float(
-        costs.loc[costs["input"] == "combine_corn", "variable-cost"].iloc[0]
-    )
-    fix_soy_combine = float(
-        costs.loc[costs["input"] == "combine_soybeans", "fixed-cost"].iloc[0]
-    )
-    var_soy_combine = float(
-        costs.loc[costs["input"] == "combine_soybeans", "variable-cost"].iloc[
-            0
-        ]
-    )
-    fix_wagon = float(
-        costs.loc[costs["input"] == "grain_cart", "fixed-cost"].iloc[0]
-    )
-    var_wagon = float(
-        costs.loc[costs["input"] == "grain_cart", "variable-cost"].iloc[0]
-    )
-    fix_hauling = float(
-        costs.loc[costs["input"] == "haul_grain", "fixed-cost"].iloc[0]
-    )
-    var_hauling = float(
-        costs.loc[costs["input"] == "haul_grain", "variable-cost"].iloc[0]
-    )
-    fix_drying = float(
-        costs.loc[costs["input"] == "dry_grain", "fixed-cost"].iloc[0]
-    )
-    var_drying = float(
-        costs.loc[costs["input"] == "dry_grain", "variable-cost"].iloc[0]
-    )
-    fix_handle = float(
-        costs.loc[costs["input"] == "auger_store_grain", "fixed-cost"].iloc[0]
-    )
-    var_handle = float(
-        costs.loc[costs["input"] == "auger_store_grain", "variable-cost"].iloc[
-            0
-        ]
-    )
+    costs = pd.read_sql(f"SELECT * FROM public.crop_prod_costs WHERE year = '{year}'", dbconn)
+    corn_seed_price = float(costs.loc[costs["input"] == "corn_seed", "fixed-cost"].iloc[0])
+    soy_seed_price = float(costs.loc[costs["input"] == "soy_seed", "fixed-cost"].iloc[0])
+    n_price = float(costs.loc[costs["input"] == "nitrogen", "fixed-cost"].iloc[0])
+    phos_price = float(costs.loc[costs["input"] == "phosphorous", "fixed-cost"].iloc[0])
+    potash_price = float(costs.loc[costs["input"] == "phosphorous", "fixed-cost"].iloc[0])
+    fix_chisel = float(costs.loc[costs["input"] == "chisel_plow", "fixed-cost"].iloc[0])
+    var_chisel = float(costs.loc[costs["input"] == "chisel_plow", "variable-cost"].iloc[0])
+    fix_disk = float(costs.loc[costs["input"] == "disk_field_cultivator", "fixed-cost"].iloc[0])
+    var_disk = float(costs.loc[costs["input"] == "disk_field_cultivator", "variable-cost"].iloc[0])
+    fix_applicator = float(costs.loc[costs["input"] == "nh3_applicator", "fixed-cost"].iloc[0])
+    var_applicator = float(costs.loc[costs["input"] == "nh3_applicator", "variable-cost"].iloc[0])
+    fix_cultivator = float(costs.loc[costs["input"] == "field_cultivator", "fixed-cost"].iloc[0])
+    var_cultivator = float(costs.loc[costs["input"] == "field_cultivator", "variable-cost"].iloc[0])
+    fix_planter = float(costs.loc[costs["input"] == "planter", "fixed-cost"].iloc[0])
+    var_planter = float(costs.loc[costs["input"] == "planter", "variable-cost"].iloc[0])
+    fix_sprayer = float(costs.loc[costs["input"] == "sprayer", "fixed-cost"].iloc[0])
+    var_sprayer = float(costs.loc[costs["input"] == "sprayer", "variable-cost"].iloc[0])
+    fix_corn_combine = float(costs.loc[costs["input"] == "combine_corn", "fixed-cost"].iloc[0])
+    var_corn_combine = float(costs.loc[costs["input"] == "combine_corn", "variable-cost"].iloc[0])
+    fix_soy_combine = float(costs.loc[costs["input"] == "combine_soybeans", "fixed-cost"].iloc[0])
+    var_soy_combine = float(costs.loc[costs["input"] == "combine_soybeans", "variable-cost"].iloc[0])
+    fix_wagon = float(costs.loc[costs["input"] == "grain_cart", "fixed-cost"].iloc[0])
+    var_wagon = float(costs.loc[costs["input"] == "grain_cart", "variable-cost"].iloc[0])
+    fix_hauling = float(costs.loc[costs["input"] == "haul_grain", "fixed-cost"].iloc[0])
+    var_hauling = float(costs.loc[costs["input"] == "haul_grain", "variable-cost"].iloc[0])
+    fix_drying = float(costs.loc[costs["input"] == "dry_grain", "fixed-cost"].iloc[0])
+    var_drying = float(costs.loc[costs["input"] == "dry_grain", "variable-cost"].iloc[0])
+    fix_handle = float(costs.loc[costs["input"] == "auger_store_grain", "fixed-cost"].iloc[0])
+    var_handle = float(costs.loc[costs["input"] == "auger_store_grain", "variable-cost"].iloc[0])
     soy_herb_cost = float(
         costs.loc[
             (costs["crop"] == "soy") & (costs["input"] == "herbicide"),
@@ -401,9 +304,7 @@ def calc_subfield_profit(
             "fixed-cost",
         ].iloc[0]
     )
-    insect_cost = float(
-        costs.loc[costs["input"] == "insecticide", "fixed-cost"].iloc[0]
-    )
+    insect_cost = float(costs.loc[costs["input"] == "insecticide", "fixed-cost"].iloc[0])
     corn_crop_insurance = float(
         costs.loc[
             (costs["crop"] == "corn") & (costs["input"] == "crop_insurance"),
@@ -416,12 +317,8 @@ def calc_subfield_profit(
             "variable-cost",
         ].iloc[0]
     )
-    rent_cost = float(
-        costs.loc[costs["input"] == "rent", "fixed-cost"].iloc[0]
-    )
-    misc_cost = float(
-        costs.loc[costs["input"] == "miscellaneous", "variable-cost"].iloc[0]
-    )
+    rent_cost = float(costs.loc[costs["input"] == "rent", "fixed-cost"].iloc[0])
+    misc_cost = float(costs.loc[costs["input"] == "miscellaneous", "variable-cost"].iloc[0])
     for i in clukey_list:
         try:
             print(f"Getting data for clukey {i}")
@@ -430,9 +327,7 @@ def calc_subfield_profit(
                 f"SELECT * FROM raccoon.raccoon_rots WHERE clukey = {i};",
                 dbconn,
             )
-            clukey_df = county_df.loc[county_df["clukey"] == i].reset_index(
-                drop=True
-            )
+            clukey_df = county_df.loc[county_df["clukey"] == i].reset_index(drop=True)
             rotation = get_rotation(rot_df, "crop")
             for i in clukey_df.index:
                 try:
@@ -454,26 +349,18 @@ def calc_subfield_profit(
                         traceback.print_exc()
                         continue
                     acreage = float(clukey_df.loc[i, "acres"])
-                    no3_loss = float(
-                        (mukey_summary.iloc[0]["leach_no3"] / 2.471) * acreage
-                    )
+                    no3_loss = float((mukey_summary.iloc[0]["leach_no3"] / 2.471) * acreage)
                     clukey = clukey_df.loc[i, "clukey"]
                     if rotation == "cc":
                         current_crop = "corn"
                         buac = float(mukey_summary.iloc[0]["corn_buac"])
-                        n_lbs = (
-                            float(mukey_summary.iloc[0]["fertiliser"]) * 0.892
-                        )
+                        n_lbs = float(mukey_summary.iloc[0]["fertiliser"]) * 0.892
                         # calculate how much phos and potash to add based on yield
                         phos_lbs = buac * 0.37
                         potash_lbs = buac * 0.37
                         # plant density is in m2 in apsim -- 10000 sq meters in hectare, 2.47 acres in hectare -- seeding rate = plant density * 10000 / 2.47
-                        sowing_density = (
-                            int(cc_mgmt["sowing_density"]) * 10000
-                        ) / 2.47
-                        cc_budget = Budget(
-                            rotation, current_crop, buac, acreage, year
-                        )
+                        sowing_density = (int(cc_mgmt["sowing_density"]) * 10000) / 2.47
+                        cc_budget = Budget(rotation, current_crop, buac, acreage, year)
                         fert_cost = cc_budget.fert_cost(
                             n_lbs,
                             n_price,
@@ -482,30 +369,24 @@ def calc_subfield_profit(
                             potash_lbs,
                             potash_price,
                         )
-                        seed_cost = cc_budget.seed_cost(
-                            sowing_density, corn_seed_price
+                        seed_cost = cc_budget.seed_cost(sowing_density, corn_seed_price)
+                        preharvest_machinery_cost = cc_budget.preharvest_machinery_cost(
+                            fix_chisel=fix_chisel,
+                            var_chisel=var_chisel,
+                            fix_disk=fix_disk,
+                            var_disk=var_disk,
+                            fix_applicator=fix_applicator,
+                            var_applicator=var_applicator,
+                            fix_planter=fix_planter,
+                            var_planter=var_planter,
+                            fix_sprayer=fix_sprayer,
+                            var_sprayer=var_sprayer,
                         )
-                        preharvest_machinery_cost = (
-                            cc_budget.preharvest_machinery_cost(
-                                fix_chisel=fix_chisel,
-                                var_chisel=var_chisel,
-                                fix_disk=fix_disk,
-                                var_disk=var_disk,
-                                fix_applicator=fix_applicator,
-                                var_applicator=var_applicator,
-                                fix_planter=fix_planter,
-                                var_planter=var_planter,
-                                fix_sprayer=fix_sprayer,
-                                var_sprayer=var_sprayer,
-                            )
-                        )
-                        harvest_machinery_cost = (
-                            cc_budget.harvest_machinery_cost(
-                                fix_corn_combine,
-                                var_corn_combine,
-                                fix_wagon,
-                                var_wagon,
-                            )
+                        harvest_machinery_cost = cc_budget.harvest_machinery_cost(
+                            fix_corn_combine,
+                            var_corn_combine,
+                            fix_wagon,
+                            var_wagon,
                         )
                         processing_cost = cc_budget.processing_cost(
                             fix_hauling,
@@ -515,12 +396,8 @@ def calc_subfield_profit(
                             fix_handle,
                             var_handle,
                         )
-                        chemicals_cost = cc_budget.chemicals_cost(
-                            corn_herb_cost, insect_cost
-                        )
-                        extra_costs = cc_budget.extra_costs(
-                            misc_cost, corn_crop_insurance
-                        )
+                        chemicals_cost = cc_budget.chemicals_cost(corn_herb_cost, insect_cost)
+                        extra_costs = cc_budget.extra_costs(misc_cost, corn_crop_insurance)
                         labor_cost = cc_budget.labor_cost()
                         revenue = cc_budget.calc_revenue(corn_price)
                         expenses = cc_budget.sum_expenses()
@@ -560,18 +437,12 @@ def calc_subfield_profit(
                     elif rotation == "cfs":
                         current_crop = "corn"
                         buac = float(mukey_summary.iloc[0]["corn_buac"])
-                        n_lbs = (
-                            float(mukey_summary.iloc[0]["fertiliser"]) * 0.892
-                        )
+                        n_lbs = float(mukey_summary.iloc[0]["fertiliser"]) * 0.892
                         # calculate how much phos and potash to add based on yield
                         phos_lbs = buac * 0.375
                         potash_lbs = buac * 0.3
-                        sowing_density = (
-                            int(cfs_mgmt["sowing_density"]) * 10000
-                        ) / 2.47
-                        cfs_budget = Budget(
-                            rotation, current_crop, buac, acreage, year
-                        )
+                        sowing_density = (int(cfs_mgmt["sowing_density"]) * 10000) / 2.47
+                        cfs_budget = Budget(rotation, current_crop, buac, acreage, year)
                         fert_cost = cfs_budget.fert_cost(
                             n_lbs,
                             n_price,
@@ -580,30 +451,24 @@ def calc_subfield_profit(
                             potash_lbs,
                             potash_price,
                         )
-                        seed_cost = cfs_budget.seed_cost(
-                            sowing_density, corn_seed_price
+                        seed_cost = cfs_budget.seed_cost(sowing_density, corn_seed_price)
+                        preharvest_machinery_cost = cfs_budget.preharvest_machinery_cost(
+                            fix_chisel=fix_chisel,
+                            var_chisel=var_chisel,
+                            fix_disk=fix_disk,
+                            var_disk=var_disk,
+                            fix_applicator=fix_applicator,
+                            var_applicator=var_applicator,
+                            fix_planter=fix_planter,
+                            var_planter=var_planter,
+                            fix_sprayer=fix_sprayer,
+                            var_sprayer=var_sprayer,
                         )
-                        preharvest_machinery_cost = (
-                            cfs_budget.preharvest_machinery_cost(
-                                fix_chisel=fix_chisel,
-                                var_chisel=var_chisel,
-                                fix_disk=fix_disk,
-                                var_disk=var_disk,
-                                fix_applicator=fix_applicator,
-                                var_applicator=var_applicator,
-                                fix_planter=fix_planter,
-                                var_planter=var_planter,
-                                fix_sprayer=fix_sprayer,
-                                var_sprayer=var_sprayer,
-                            )
-                        )
-                        harvest_machinery_cost = (
-                            cfs_budget.harvest_machinery_cost(
-                                fix_corn_combine,
-                                var_corn_combine,
-                                fix_wagon,
-                                var_wagon,
-                            )
+                        harvest_machinery_cost = cfs_budget.harvest_machinery_cost(
+                            fix_corn_combine,
+                            var_corn_combine,
+                            fix_wagon,
+                            var_wagon,
                         )
                         processing_cost = cfs_budget.processing_cost(
                             fix_hauling,
@@ -613,12 +478,8 @@ def calc_subfield_profit(
                             fix_handle,
                             var_handle,
                         )
-                        chemicals_cost = cfs_budget.chemicals_cost(
-                            corn_herb_cost
-                        )
-                        extra_costs = cfs_budget.extra_costs(
-                            misc_cost, corn_crop_insurance
-                        )
+                        chemicals_cost = cfs_budget.chemicals_cost(corn_herb_cost)
+                        extra_costs = cfs_budget.extra_costs(misc_cost, corn_crop_insurance)
                         labor_cost = cfs_budget.labor_cost()
                         revenue = cfs_budget.calc_revenue(corn_price)
                         expenses = cfs_budget.sum_expenses()
@@ -662,14 +523,10 @@ def calc_subfield_profit(
                         phos_lbs = buac * 0.8
                         potash_lbs = buac * 1.51
                         n_lbs = 0
-                        sowing_density = (
-                            int(sfc_mgmt["sowing_density"]) * 10000
-                        ) / 2.47
+                        sowing_density = (int(sfc_mgmt["sowing_density"]) * 10000) / 2.47
                         spray_fix = fix_sprayer * 2
                         spray_var = var_sprayer * 2
-                        sfc_budget = Budget(
-                            rotation, current_crop, buac, acreage, year
-                        )
+                        sfc_budget = Budget(rotation, current_crop, buac, acreage, year)
                         fert_cost = sfc_budget.fert_cost(
                             n_lbs,
                             n_price,
@@ -678,30 +535,24 @@ def calc_subfield_profit(
                             potash_lbs,
                             potash_price,
                         )
-                        seed_cost = sfc_budget.seed_cost(
-                            sowing_density, soy_seed_price
+                        seed_cost = sfc_budget.seed_cost(sowing_density, soy_seed_price)
+                        preharvest_machinery_cost = sfc_budget.preharvest_machinery_cost(
+                            fix_chisel=fix_chisel,
+                            var_chisel=var_chisel,
+                            fix_disk=fix_disk,
+                            var_disk=var_disk,
+                            fix_applicator=fix_applicator,
+                            var_applicator=var_applicator,
+                            fix_planter=fix_planter,
+                            var_planter=var_planter,
+                            fix_sprayer=spray_fix,
+                            var_sprayer=spray_var,
                         )
-                        preharvest_machinery_cost = (
-                            sfc_budget.preharvest_machinery_cost(
-                                fix_chisel=fix_chisel,
-                                var_chisel=var_chisel,
-                                fix_disk=fix_disk,
-                                var_disk=var_disk,
-                                fix_applicator=fix_applicator,
-                                var_applicator=var_applicator,
-                                fix_planter=fix_planter,
-                                var_planter=var_planter,
-                                fix_sprayer=spray_fix,
-                                var_sprayer=spray_var,
-                            )
-                        )
-                        harvest_machinery_cost = (
-                            sfc_budget.harvest_machinery_cost(
-                                fix_soy_combine,
-                                var_soy_combine,
-                                fix_wagon,
-                                var_wagon,
-                            )
+                        harvest_machinery_cost = sfc_budget.harvest_machinery_cost(
+                            fix_soy_combine,
+                            var_soy_combine,
+                            fix_wagon,
+                            var_wagon,
                         )
                         processing_cost = sfc_budget.processing_cost(
                             fix_hauling,
@@ -711,12 +562,8 @@ def calc_subfield_profit(
                             fix_handle,
                             var_handle,
                         )
-                        chemicals_cost = sfc_budget.chemicals_cost(
-                            soy_herb_cost
-                        )
-                        extra_costs = sfc_budget.extra_costs(
-                            misc_cost, soy_crop_insurance
-                        )
+                        chemicals_cost = sfc_budget.chemicals_cost(soy_herb_cost)
+                        extra_costs = sfc_budget.extra_costs(misc_cost, soy_crop_insurance)
                         labor_cost = sfc_budget.labor_cost()
                         revenue = sfc_budget.calc_revenue(soy_price)
                         expenses = sfc_budget.sum_expenses()

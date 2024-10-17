@@ -2,6 +2,7 @@
 
 # %%
 from os import system
+
 from cdl_database import config
 
 # %%
@@ -20,9 +21,7 @@ dbpassword = params["password"]
 
 # %%
 def cdl_callstr(rstr_path, dbschema, dbtable, host, port, name, user):
-    callstr = "raster2pgsql -Y -q -I -N 0 -s 102039 -t 50x50 {} {}.{} | psql -h {} -p {} -d {} -U {}".format(
-        raster_path, dbschema, dbtable, host, port, name, user
-    )
+    callstr = "raster2pgsql -Y -q -I -N 0 -s 102039 -t 50x50 {} {}.{} | psql -h {} -p {} -d {} -U {}".format(raster_path, dbschema, dbtable, host, port, name, user)
     system(callstr)
 
 

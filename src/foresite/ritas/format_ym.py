@@ -1,5 +1,4 @@
 import geopandas as gpd
-import pandas as pd
 
 # A csv file in wide format with one yield monitor observation per row and at least the following column variables (include header in the first row).
 # site: site name, e.g., Basswood, Orbweaver North
@@ -29,9 +28,7 @@ def read_ym_file(ym_file) -> gpd.GeoDataFrame:
             print("File has no geometry column.")
             return
     except Exception:
-        print(
-            "Incorrect path, file does not exist, or not readable by GeoPandas."
-        )
+        print("Incorrect path, file does not exist, or not readable by GeoPandas.")
 
 
 def reproject_ym(ym_gdf, target_crs="EPSG:26915") -> gpd.GeoDataFrame:
@@ -95,9 +92,7 @@ class RitasYieldMonitor:
 
     """
 
-    def __init__(
-        self, ym_file, site_name, crop, tar_moist=15.5, tar_crs="EPSG:26915"
-    ):
+    def __init__(self, ym_file, site_name, crop, tar_moist=15.5, tar_crs="EPSG:26915"):
         self.ym_file = ym_file
         self.site_name = site_name
         self.crop = crop
@@ -111,9 +106,7 @@ class RitasYieldMonitor:
         else:
             self.tar_moist = 1 + (self.tar_moist / 100)
         self.formatted_gdf = read_ym_file(self.ym_file)
-        self.formatted_gdf = reproject_ym(
-            self.formatted_gdf, target_crs=self.tar_crs
-        )
+        self.formatted_gdf = reproject_ym(self.formatted_gdf, target_crs=self.tar_crs)
         self.formatted_gdf = format_xy(self.formatted_gdf)
         self.formatted_gdf = add_record_col(self.formatted_gdf)
         self.formatted_gdf["crop"] = self.crop
@@ -141,15 +134,9 @@ class ApexYieldMonitor(RitasYieldMonitor):
         self.formatted_gdf = super().format_ym_file()
         ## if converting lbs to kg
         self.formatted_gdf["swath"] = self.formatted_gdf["Width"] * 0.3048
-        self.formatted_gdf["Distance"] = (
-            self.formatted_gdf["Distance"] * 0.3048
-        )
-        self.formatted_gdf["mass"] = (
-            self.formatted_gdf["YieldMas"] * self.tar_moist
-        ) * 0.45359237
-        self.formatted_gdf["ProcYear"] = self.formatted_gdf["ProcYear"].astype(
-            "int32"
-        )
+        self.formatted_gdf["Distance"] = self.formatted_gdf["Distance"] * 0.3048
+        self.formatted_gdf["mass"] = (self.formatted_gdf["YieldMas"] * self.tar_moist) * 0.45359237
+        self.formatted_gdf["ProcYear"] = self.formatted_gdf["ProcYear"].astype("int32")
         ## if converting tons to kg
         # self.formatted_gdf['mass'] = (self.formatted_gdf['YieldMas'] * self.tar_moist) * 907.18474
         self.formatted_gdf = self.formatted_gdf.rename(

@@ -1,8 +1,8 @@
 """Tbw."""
 
+from xml.etree.ElementTree import Element, SubElement
+
 import pandas as pd
-import xml.etree.ElementTree
-from xml.etree.ElementTree import ElementTree, Element, SubElement
 
 
 ###
@@ -70,9 +70,7 @@ def get_mgmt_values(mgmt_dict, mgmt_key):
         return values
 
 
-def create_fert_df(
-    mgmt_dict, amount_key, formula_key, depth_key, date_key, year
-):
+def create_fert_df(mgmt_dict, amount_key, formula_key, depth_key, date_key, year):
     """creates a new dataframe for fertilizer operations
 
     Args:
@@ -124,9 +122,7 @@ def add_fert_ops(df, mgmt_obj):
     return mgmt_obj
 
 
-def create_tillage_df(
-    mgmt_dict, implement_key, depth_key, f_incorp_key, date_key, year
-):
+def create_tillage_df(mgmt_dict, implement_key, depth_key, f_incorp_key, date_key, year):
     """creates a new df for tillage operations from mgmt dict/dict
 
     Args:
@@ -149,9 +145,7 @@ def create_tillage_df(
     date_values = [get_date(date, year) for date in date_values]
     # convert to df
     tillage_df = pd.DataFrame(
-        list(
-            zip(implement_values, depth_values, f_incorp_values, date_values)
-        ),
+        list(zip(implement_values, depth_values, f_incorp_values, date_values)),
         columns=[
             "tillage_implement",
             "tillage_depth",
@@ -248,9 +242,7 @@ def add_planting_ops(df, mgmt_obj):
         df["date"],
     ):
         if cultivar != None:
-            mgmt_obj.add_plant_op(
-                date, crop, density, depth, cultivar, spacing
-            )
+            mgmt_obj.add_plant_op(date, crop, density, depth, cultivar, spacing)
         else:
             print("Cultivar missing.")
     return mgmt_obj
@@ -274,9 +266,7 @@ def create_harvest_df(mgmt_dict, crop_key, date_key, year):
     # convert dates
     date_values = [get_date(date, year) for date in date_values]
     # convert to df
-    harvest_df = pd.DataFrame(
-        list(zip(crop_values, date_values)), columns=["crop", "date"]
-    )
+    harvest_df = pd.DataFrame(list(zip(crop_values, date_values)), columns=["crop", "date"])
     return harvest_df
 
 
@@ -311,10 +301,7 @@ class OpManager:
     ###
     def add_fert_op(self, date, value, depth, type):
         op_elem = init_new_op(date)
-        action = (
-            "Fertiliser apply "
-            + "amount = {} (kg/ha), depth = {} (mm), type = {} ()"
-        ).format(str(value), str(depth), type)
+        action = ("Fertiliser apply " + "amount = {} (kg/ha), depth = {} (mm), type = {} ()").format(str(value), str(depth), type)
         act_elem = SubElement(op_elem, "action")
         act_elem.text = action
         self.ops_xml.append(op_elem)
@@ -322,10 +309,7 @@ class OpManager:
     ###
     def add_manure_op(self, date, type, name, mass, cnr, cpr):
         op_elem = init_new_op(date)
-        action = (
-            "SurfaceOrganicMatter add_surfaceom "
-            + "type = {}, name = {}, mass = {} (kg/ha), cnr = {}, cpr = {}"
-        ).format(type, name, str(mass), str(cnr), str(cpr))
+        action = ("SurfaceOrganicMatter add_surfaceom " + "type = {}, name = {}, mass = {} (kg/ha), cnr = {}, cpr = {}").format(type, name, str(mass), str(cnr), str(cpr))
         act_elem = SubElement(op_elem, "action")
         act_elem.text = action
         self.ops_xml.append(op_elem)
@@ -333,10 +317,9 @@ class OpManager:
     ###
     def add_plant_op(self, date, crop, density, depth, cultivar, spacing):
         op_elem = init_new_op(date)
-        action = (
-            "{} sow plants = {} (plants/m2), sowing_depth = {} (mm), "
-            + "cultivar = {}, row_spacing = {} (mm), crop_class = plant"
-        ).format(crop, str(density), str(depth), cultivar, str(spacing))
+        action = ("{} sow plants = {} (plants/m2), sowing_depth = {} (mm), " + "cultivar = {}, row_spacing = {} (mm), crop_class = plant").format(
+            crop, str(density), str(depth), cultivar, str(spacing)
+        )
         act_elem = SubElement(op_elem, "action")
         act_elem.text = action
         self.ops_xml.append(op_elem)
@@ -382,9 +365,7 @@ class OpManager:
         !bbc_gradient = -1
         !bbc_potential = {} - {}
         """.format(bbc_potential[0], bbc_potential[1])
-        gradient_event = SubElement(gradient_script, "event").text = (
-            "start_of_day"
-        )
+        gradient_event = SubElement(gradient_script, "event").text = "start_of_day"
 
         end_script = SubElement(empty_man, "script")
         end_script_text = SubElement(end_script, "text")
