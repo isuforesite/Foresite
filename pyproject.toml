@@ -1,6 +1,6 @@
 
 [tool.ruff]
-line-length = 79
+line-length = 179
 target-version = "py39"
 
 [tool.ruff.lint]
