@@ -1,11 +1,12 @@
 """Tbw."""
 
-import os
-import sys
-import pandas as pd
-import numpy as np
 import glob
+import os
 import re
+
+import numpy as np
+import pandas as pd
+
 # import apsim.database as db
 
 
@@ -100,9 +101,7 @@ def parse_all_output_county(
     #     index = False )
 
 
-def parse_summary_output_county(
-    out_file_dir, year=2019
-):  # , db_path, db_schema, db_table
+def parse_summary_output_county(out_file_dir, year=2019):  # , db_path, db_schema, db_table
     """Parses all .out files for a county, does some summary stats, and returns df for last year
     Arguments:
         out_file_dir {str} -- path to folder that contains .out files
@@ -196,9 +195,7 @@ def parse_summary_output_county(
     #     index = False )
 
 
-def parse_all_output_field(
-    out_file_dir, year=2019
-):  # , db_path, db_schema, db_table
+def parse_all_output_field(out_file_dir, year=2019):  # , db_path, db_schema, db_table
     """Parses all .out files for a given field, gets daily output and returns df for the given year.
     Arguments:
         out_file_dir {str} -- path to folder that contains .out files
@@ -267,9 +264,7 @@ def parse_all_output_field(
     #     index = False )
 
 
-def parse_summary_output_field(
-    out_file_dir, year, swim=False
-):  # , db_path, db_schema, db_table
+def parse_summary_output_field(out_file_dir, year, swim=False):  # , db_path, db_schema, db_table
     """Parses all .out files for a given field, does some summary stats, and returns df for last year
     Arguments:
         out_file_dir {str} -- path to folder that contains .out files
@@ -393,9 +388,7 @@ def parse_summary_output_field(
     #     index = False )
 
 
-def parse_summary_output(
-    out_file, year=None, swim=False
-):  # , db_path, db_schema, db_table
+def parse_summary_output(out_file, year=None, swim=False):  # , db_path, db_schema, db_table
     """Parses and summarizes output (.out) for a given year.
     Arguments:
         out_file {str} -- APSIM .out file to read.
@@ -494,9 +487,7 @@ def parse_summary_output(
     else:
         years = daily_df["year"].unique()
         for i in years:
-            df_year = daily_df.loc[daily_df["year"] == i].reset_index(
-                drop=True
-            )
+            df_year = daily_df.loc[daily_df["year"] == i].reset_index(drop=True)
             # perform simple analytics at time scale (here we only do year)
             data = {
                 "title": df_header,
@@ -525,9 +516,7 @@ def parse_summary_output(
             if swim == True:
                 swim_data_dict = {
                     "subsurface_drain": df_year["subsurface_drain"].sum(),
-                    "subsurface_drain_no3": df_year[
-                        "subsurface_drain_no3"
-                    ].sum(),
+                    "subsurface_drain_no3": df_year["subsurface_drain_no3"].sum(),
                 }
                 data.update(swim_data_dict)
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env Python
 
-from sqlalchemy import create_engine
 from configparser import ConfigParser
+
+from sqlalchemy import create_engine
 
 
 def config(filename="database.ini", section="postgresql"):

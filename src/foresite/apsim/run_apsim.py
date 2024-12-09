@@ -5,18 +5,17 @@ Created as part of ISU C-CHANGE Foresite system on 6 Jan 2020
 @email: mnowatz@iastate.edu
 """
 
+import fnmatch
+import os
 import subprocess
 import sys
 import threading
 import traceback
-import os
-import fnmatch
-from multiprocessing import cpu_count
 from glob import glob
+from multiprocessing import cpu_count
 from os import getcwd
-from tqdm import tqdm  # progress bar
-from time import time, perf_counter
 from queue import Queue
+from time import perf_counter
 
 
 def find_apsim_exe():
@@ -47,9 +46,7 @@ def find_to_sim_exe():
     """
     try:
         # find all installed ApsimToSim.exe at default installation location and return the most recent (last[-1]).
-        sim_exes = glob(
-            "C:\\Program Files (x86)\\APSIM7*\\Model\\ApsimToSim.exe"
-        )
+        sim_exes = glob("C:\\Program Files (x86)\\APSIM7*\\Model\\ApsimToSim.exe")
         current_to_sim_exe = sim_exes[-1]
         return current_to_sim_exe
     except:
@@ -81,9 +78,7 @@ def worker_apsim(queue, lock):
     for args in iter(queue.get, None):
         try:
             convert_apsim_to_sim(args, lock)
-        except (
-            Exception
-        ) as e:  # catch exceptions to avoid exiting the thread prematurely
+        except Exception as e:  # catch exceptions to avoid exiting the thread prematurely
             print(f"{args} failed: {e}")  # , file=sys.stderr
 
 
@@ -101,10 +96,7 @@ def convert_all_apsim_to_sim(apsim_filename_list, num_cores=None):
 
     # run .apsim files and start threads to convert
     lock = threading.RLock()
-    threads = [
-        threading.Thread(target=worker_apsim, args=(q, lock))
-        for _ in range(num_cores)
-    ]
+    threads = [threading.Thread(target=worker_apsim, args=(q, lock)) for _ in range(num_cores)]
     for t in threads:
         t.daemon = False  # program quits when threads die
         t.start()
@@ -139,9 +131,7 @@ def worker_sim(queue, lock):
     for args in iter(queue.get, None):
         try:
             run_a_sim(args, lock)
-        except (
-            Exception
-        ) as e:  # catch exceptions to avoid exiting the thread prematurely
+        except Exception as e:  # catch exceptions to avoid exiting the thread prematurely
             print(f"{args} failed: {e}")  # , file=sys.stderr
 
 
@@ -157,10 +147,7 @@ def run_many_sims(sim_filename_list, num_cores=None):
 
     # Run .sim files and start threads
     lock = threading.RLock()
-    threads = [
-        threading.Thread(target=worker_sim, args=(q, lock))
-        for _ in range(num_cores)
-    ]
+    threads = [threading.Thread(target=worker_sim, args=(q, lock)) for _ in range(num_cores)]
     for t in threads:
         t.daemon = False  # program quits when threads die
         t.start()
@@ -205,9 +192,7 @@ def run_all_simulations(apsim_files_path="apsim_files\\Accola", n_cores=None):
     wd = getcwd()
     time1 = perf_counter()
     apsim_files = glob(apsim_files_path + "\\*.apsim")
-    complete_apsim_paths = [
-        wd + f"\\{apsim_file}" for apsim_file in apsim_files
-    ]
+    complete_apsim_paths = [wd + f"\\{apsim_file}" for apsim_file in apsim_files]
     # convert list of .apsim files to .sim files
     convert_all_apsim_to_sim(complete_apsim_paths, num_cores=n_cores)
 

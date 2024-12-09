@@ -1,12 +1,13 @@
 """Tbw."""
 
-import requests
-import pandas as pd
-import numpy as np
-import json
-import urllib
 import io
+import json
 import os
+import urllib
+
+import numpy as np
+import pandas as pd
+import requests
 from openpyxl import Workbook
 from openpyxl.styles import Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -30,7 +31,7 @@ class Weather:
         leap_years = [yr for yr in range(1980, 2020, 4)]
         for key in keys:
             if key not in wth_df.columns:
-                print('Imported weather data missing key "%"'.format(key))
+                print('Imported weather data missing key "%"'.format())
 
         wth_df = wth_df.drop(columns=["f1"], axis=1)
 
@@ -52,9 +53,7 @@ class Weather:
 
         # check for leap years
         for lp_yr in leap_years:
-            lp_day = self.data.loc[
-                (self.data["year"] == lp_yr) & (self.data["day"] == 365)
-            ].copy(deep=True)
+            lp_day = self.data.loc[(self.data["year"] == lp_yr) & (self.data["day"] == 365)].copy(deep=True)
             lp_day["day"] = 366
             lp_day["yday"] = 366
 
@@ -135,9 +134,7 @@ class Weather:
         wth_df["dayL"] = round(wth_df["dayl (s)"] / 3600, 1)
 
         # solar radiation (MJ/m2)
-        wth_df["radn"] = round(
-            wth_df["srad (W/m^2)"] * wth_df["dayl (s)"] / 3600 * 0.0036, 1
-        )
+        wth_df["radn"] = round(wth_df["srad (W/m^2)"] * wth_df["dayl (s)"] / 3600 * 0.0036, 1)
 
         # max temperature (deg C)
         wth_df["maxt"] = round(wth_df["tmax (deg c)"], 1)
@@ -157,9 +154,7 @@ class Weather:
         # database includes leap day. Values for December 31 are discarded from
         # leap years to maintain a 365-day year.
         for lp_yr in leap_years:
-            lp_day = wth_df.loc[
-                (wth_df["year"] == lp_yr) & (wth_df["day"] == 365)
-            ].copy(deep=True)
+            lp_day = wth_df.loc[(wth_df["year"] == lp_yr) & (wth_df["day"] == 365)].copy(deep=True)
             lp_day["day"] = 366
             lp_day["yday"] = 366
 
@@ -208,18 +203,14 @@ class Weather:
 
         return self
 
-    def from_nasa_power(
-        self, lat, lon, start_date=19900101, end_date=20201231, format="JSON"
-    ):
+    def from_nasa_power(self, lat, lon, start_date=19900101, end_date=20201231, format="JSON"):
         self.lat = lat
         self.lon = lon
         # format = 'CSV' # JSON, CSV, ASCII, ICASA, NETCDF
         # request from API
         nasa_params = r"PRECTOTCORR,ALLSKY_SFC_SW_DWN,T2M_MIN,T2M_MAX,WS2M"
         full_url = f"{NASA_URL}startDate={start_year}0101&endDate={end_year}1231&lat={lat}&lon={lon}&outputList={output}&userCommunity=SSE"
-        json_response = json.loads(
-            requests.get(full_url).content.decode("utf-8")
-        )
+        json_response = json.loads(requests.get(full_url).content.decode("utf-8"))
         # Selects the file URL from the JSON response
         csv_request_url = json_response["outputs"][output.lower()]
         # Download File to Folder
@@ -227,17 +218,13 @@ class Weather:
         # create folder if doesn't exist
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
-        output_file_location = os.path.join(
-            output_folder, os.path.basename(csv_request_url)
-        )
+        output_file_location = os.path.join(output_folder, os.path.basename(csv_request_url))
         urllib.request.urlretrieve(csv_request_url, output_file_location)
         # read file and then delete
         met_df = pd.read_csv(output_file_location, header=14)
         # calculate daily mean temp
         met_df = met_df.drop(["LAT", "LON"], axis=1)
-        met_df["meant"] = round(
-            ((met_df["T2M_MIN"] + met_df["T2M_MAX"]) / 2), 1
-        )
+        met_df["meant"] = round(((met_df["T2M_MIN"] + met_df["T2M_MAX"]) / 2), 1)
         # add day of year as 'day' column in 1-365 format for apsim
         date_range = pd.date_range(f"01-01-{start_year}", f"12-31-{end_year}")
         doy = date_range.dayofyear
@@ -293,32 +280,21 @@ class Weather:
             metfile.write("station = Nasa Power weather\r\n")
             metfile.write("latitude = {} (DECIMAL DEGREES)\r\n".format(lat))
             metfile.write("longitude = {} (DECIMAL DEGREES)\r\n".format(lon))
-            metfile.write(
-                "tav = " + str(round(np.mean(self.data["meant"]), 1)) + "\r\n"
-            )
+            metfile.write("tav = " + str(round(np.mean(self.data["meant"]), 1)) + "\r\n")
             metfile.write(
                 "amp = "
                 + str(
                     round(
-                        np.mean(
-                            self.data["T2M_MAX"]
-                            - np.mean(self.data["T2M_MIN"])
-                        ),
+                        np.mean(self.data["T2M_MAX"] - np.mean(self.data["T2M_MIN"])),
                         2,
                     )
                 )
                 + "\r\n"
             )
-            metfile.write(
-                "!Weather generated using ISU Foresite framework\r\n"
-            )
+            metfile.write("!Weather generated using ISU Foresite framework\r\n")
             metfile.write(headers + "\r\n")
             metfile.write(units + "\r\n")
-            metfile.write(
-                self.data.to_csv(
-                    sep=" ", header=False, index=False, line_terminator="\r\n"
-                )
-            )
+            metfile.write(self.data.to_csv(sep=" ", header=False, index=False, line_terminator="\r\n"))
 
     def write_nasa_excel_file(self, filepath, filename):
         if not os.path.exists(filepath):
@@ -432,22 +408,12 @@ class Weather:
             metfile.write("stateionname = Daymet weather\r\n")
             metfile.write("latitude = {} (DECIMAL DEGREES)\r\n".format(lat))
             metfile.write("longitude = {} (DECIMAL DEGREES)\r\n".format(lon))
-            metfile.write(
-                "tav = " + str(round(self.data["maxt"].mean(), 1)) + "\r\n"
-            )
-            metfile.write(
-                "amp = " + str(round(self.data["maxt"].max(), 1)) + "\r\n"
-            )
-            metfile.write(
-                "!Weather generated using ISU Foresite framework\r\n"
-            )
+            metfile.write("tav = " + str(round(self.data["maxt"].mean(), 1)) + "\r\n")
+            metfile.write("amp = " + str(round(self.data["maxt"].max(), 1)) + "\r\n")
+            metfile.write("!Weather generated using ISU Foresite framework\r\n")
             metfile.write(headers + "\r\n")
             metfile.write(units + "\r\n")
-            metfile.write(
-                self.data.to_csv(
-                    sep=" ", header=False, index=False, line_terminator="\r\n"
-                )
-            )
+            metfile.write(self.data.to_csv(sep=" ", header=False, index=False, line_terminator="\r\n"))
             metfile.close()
 
     def add_daymet_spinup(self, lat, lon, init_yr, end_yr):
@@ -484,9 +450,7 @@ class Weather:
         wth_df["year"] = spinup_df["year"]
         wth_df["day"] = spinup_df["yday"]
         wth_df["dayL"] = spinup_df["dayl (s)"] / 3600
-        wth_df["radn"] = (
-            spinup_df["srad (W/m^2)"] * spinup_df["dayl (s)"] / 3600 * 0.0036
-        )
+        wth_df["radn"] = spinup_df["srad (W/m^2)"] * spinup_df["dayl (s)"] / 3600 * 0.0036
         wth_df["maxt"] = spinup_df["tmax (deg c)"]
         wth_df["mint"] = spinup_df["tmin (deg c)"]
         wth_df["prcp"] = spinup_df["prcp (mm/day)"]
@@ -497,9 +461,7 @@ class Weather:
 
         # check for leap years
         for lp_yr in leap_years:
-            lp_day = wth_df.loc[
-                (wth_df["year"] == lp_yr) & (wth_df["day"] == 365)
-            ].copy(deep=True)
+            lp_day = wth_df.loc[(wth_df["year"] == lp_yr) & (wth_df["day"] == 365)].copy(deep=True)
             lp_day["day"] = 366
             lp_day["yday"] = 366
 
@@ -548,9 +510,7 @@ class Weather:
         self.data = self.data.round(2)
 
 
-def create_excel_met(
-    lat, long, start_year, end_year, met_name, tar_folder="apsim_files/met"
-):
+def create_excel_met(lat, long, start_year, end_year, met_name, tar_folder="apsim_files/met"):
     """Creates Daymet met file as an Excel spreadsheet.
 
     Args:
@@ -620,8 +580,6 @@ Returns:
 """
 
 
-def create_met(
-    lat, long, start_year, end_year, filename, path="apsim_files/met_files"
-):
+def create_met(lat, long, start_year, end_year, filename, path="apsim_files/met_files"):
     weather_obj = Weather().from_daymet(lat, long, start_year, end_year)
     weather_obj.write_met_file(f"{path}/{filename}.met")

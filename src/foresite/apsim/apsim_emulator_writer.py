@@ -1,12 +1,11 @@
 """Tbw."""
 
-import os
-import xml.etree.ElementTree
-from xml.etree.ElementTree import ElementTree, Element, SubElement
-import pandas as pd
 import json
+import os
+from xml.etree.ElementTree import Element, ElementTree, SubElement
 
 import apsim.wrapper as apsim
+import pandas as pd
 
 # Connect to database
 dbconn = apsim.connect_to_database("database.ini")

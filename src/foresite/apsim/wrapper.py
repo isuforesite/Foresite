@@ -1,12 +1,11 @@
 """Tbw."""
 
-import xml.etree.ElementTree
-from xml.etree.ElementTree import ElementTree, Element, SubElement
+from xml.etree.ElementTree import Element, SubElement
 
-import apsim.soils as soils
-import apsim.weather as clim
 import apsim.database as db
 import apsim.op_manager as man
+import apsim.soils as soils
+import apsim.weather as clim
 
 
 ###
@@ -55,11 +54,7 @@ def set_output_variables(out_file, var_list):
     evnt = SubElement(evnts, "event")
     evnt.text = "daily"
 
-    var_list = [
-        var
-        for var in var_list
-        if var not in ["dd/mm/yyyy as Date", "day", "year"]
-    ]
+    var_list = [var for var in var_list if var not in ["dd/mm/yyyy as Date", "day", "year"]]
 
     return output_xml
 
